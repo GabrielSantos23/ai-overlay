@@ -1,0 +1,35 @@
+appId: "io.github.gsantos.electron-next"
+productName: "Electron Next.JS"
+copyright: "Copyright (c) 2025 GSantos"
+directories:
+  output: "dist"
+  buildResources: "build"
+files:
+  - "out/**/*"
+  - "main/**/*"
+  - "package.json"
+  - "node_modules/**/*"
+  - "!**/node_modules/*/{CHANGELOG.md,README.md,README,readme.md,readme}"
+  - "!**/node_modules/*/{test,__tests__,tests,powered-test,example,examples}"
+  - "!**/node_modules/*.d.ts"
+  - "!**/node_modules/.bin"
+  - "!**/*.{iml,o,hprof,orig,pyc,pyo,rbc,swp,csproj,sln,xproj}"
+  - "!.editorconfig"
+  - "!**/._*"
+  - "!**/{.DS_Store,.git,.hg,.svn,CVS,RCS,SCCS,.gitignore,.gitattributes}"
+  - "!**/{__pycache__,thumbs.db,.flowconfig,.idea,.vs,.nyc_output}"
+  - "!**/{appveyor.yml,.travis.yml,circle.yml}"
+  - "!**/{npm-debug.log,yarn.lock,.yarn-integrity,.yarn-metadata.json}"
+win:
+  target: "dir"
+  icon: "resources/icon.ico"
+  requestedExecutionLevel: "asInvoker"
+  artifactName: "${productName}-${version}-${arch}.${ext}"
+  compression: "maximum"
+  asar: true
+  asarUnpack:
+    - "**/*.{node,dll}"
+  extraResources:
+    - from: "out"
+      to: "out"
+      filter: ["**/*"]

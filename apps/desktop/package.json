@@ -1,0 +1,54 @@
+{
+  "name": "desktop",
+  "version": "1.0.0",
+  "private": true,
+  "description": "The Electron shell for the application.",
+  "author": "Your Name",
+  "main": "electron/main.js",
+  "scripts": {
+    "start": "electron .",
+    "build": "cross-env CSC_IDENTITY_AUTO_DISCOVERY=false electron-builder --win portable"
+  },
+  "dependencies": {
+    "electron-updater": "^6.6.2"
+  },
+  "devDependencies": {
+    "cross-env": "^10.1.0",
+    "electron": "^38.3.0",
+    "electron-builder": "^26.0.12"
+  },
+  "build": {
+    "appId": "com.electron-tanstack-router.desktop",
+    "productName": "Electron TanStack Router",
+    "forceCodeSigning": false,
+    "files": [
+      "electron/**/*",
+      {
+        "from": "../web/dist",
+        "to": ".",
+        "filter": [
+          "**/*"
+        ]
+      }
+    ],
+    "directories": {
+      "output": "release"
+    },
+    "win": {
+      "target": "dir",
+      "verifyUpdateCodeSignature": false,
+      "requestedExecutionLevel": "asInvoker"
+    },
+    "mac": {
+      "target": "dir",
+      "sign": false
+    },
+    "linux": {
+      "target": "dir"
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true
+    }
+  }
+}

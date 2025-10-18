@@ -9,3 +9,6 @@ neonConfig.webSocketConstructor = ws;
 
 const sql = neon(process.env.DATABASE_URL || "");
 export const db = drizzle(sql);
+
+// Export schema
+export * from "./schema/auth";

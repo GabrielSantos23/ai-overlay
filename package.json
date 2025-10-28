@@ -25,9 +25,10 @@
     "dev": "turbo dev",
     "build": "turbo build",
     "check-types": "turbo check-types",
-    "dev:native": "turbo -F native dev",
+    "dev:desktop": "turbo -F web desktop:dev",
     "dev:web": "turbo -F web dev",
     "dev:server": "turbo -F server dev",
+    "dev:full": "concurrently \"turbo -F server dev\" \"turbo -F web desktop:dev\"",
     "db:push": "turbo -F @tauri-ai-overlay/db db:push",
     "db:studio": "turbo -F @tauri-ai-overlay/db db:studio",
     "db:generate": "turbo -F @tauri-ai-overlay/db db:generate",
@@ -35,12 +36,14 @@
   },
   "dependencies": {
     "dotenv": "^17.2.2",
+    "drizzle-orm": "^0.44.7",
     "zod": "^4.1.11"
   },
   "devDependencies": {
     "turbo": "^2.5.4",
     "tsdown": "^0.15.5",
-    "@types/bun": "^1.2.6"
+    "@types/bun": "^1.2.6",
+    "concurrently": "^9.1.0"
   },
   "packageManager": "bun@1.2.19"
 }

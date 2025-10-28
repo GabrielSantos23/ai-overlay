@@ -2,51 +2,106 @@ import "dotenv/config";
 import { trpcServer } from "@hono/trpc-server";
 import { createContext } from "@tauri-ai-overlay/api/context";
 import { appRouter } from "@tauri-ai-overlay/api/routers/index";
+import { createChatStream } from "@tauri-ai-overlay/api/chat-utils";
 import { auth } from "@tauri-ai-overlay/auth";
 import { Hono } from "hono";
 import { cors } from "hono/cors";
 import { logger } from "hono/logger";
-import { streamText, convertToModelMessages } from "ai";
-import { google } from "@ai-sdk/google";
 
 const app = new Hono();
 
 app.use(logger());
+
 app.use(
-	"/*",
-	cors({
-		origin: process.env.CORS_ORIGIN || "",
-		allowMethods: ["GET", "POST", "OPTIONS"],
-		allowHeaders: ["Content-Type", "Authorization"],
-		credentials: true,
-	}),
+  "/*",
+  cors({
+    origin: process.env.CORS_ORIGIN || "",
+    allowMethods: ["GET", "POST", "OPTIONS"],
+    allowHeaders: ["Content-Type", "Authorization"],
+    credentials: true,
+  })
 );
 
 app.on(["POST", "GET"], "/api/auth/*", (c) => auth.handler(c.req.raw));
 
 app.use(
-	"/trpc/*",
-	trpcServer({
-		router: appRouter,
-		createContext: (_opts, context) => {
-			return createContext({ context });
-		},
-	}),
+  "/trpc/*",
+  trpcServer({
+    router: appRouter,
+    createContext: async (_opts, honoCtx) => {
+      return await createContext({ context: honoCtx });
+    },
+  })
 );
 
 app.post("/ai", async (c) => {
-	const body = await c.req.json();
-	const uiMessages = body.messages || [];
-	const result = streamText({
-		model: google("gemini-2.5-flash"),
-		messages: convertToModelMessages(uiMessages),
-	});
+  const startTime = Date.now();
+  try {
+    const body = await c.req.json();
+    const uiMessages = body.messages || [];
+    const conversationId = body.conversationId;
 
-	return result.toUIMessageStreamResponse();
+    // Derive user from session headers instead of trusting body
+    const session = await auth.api.getSession({ headers: c.req.raw.headers });
+    const userId = session?.user?.id;
+
+    console.log(`[AI] Starting request with ${uiMessages.length} messages`);
+    console.log(`[AI] ConversationId from body:`, conversationId);
+    console.log(`[AI] UserId:`, userId);
+
+    // Validate required fields
+    if (!userId) {
+      return c.json({ error: "User authentication required" }, 401);
+    }
+
+    // Use shared utility for chat stream
+    const {
+      result,
+      conversationId: convId,
+      modelName,
+    } = await createChatStream({
+      userId,
+      uiMessages,
+      conversationId,
+      onFinish: async ({ conversationId }) => {
+        console.log(
+          `[AI] Stored assistant response in conversation ${conversationId} (${
+            Date.now() - startTime
+          }ms total)`
+        );
+      },
+    });
+
+    console.log(
+      `[AI] Returning stream response (${Date.now() - startTime}ms to start)`
+    );
+
+    // Return stream with conversation ID in headers
+    const response = result.toUIMessageStreamResponse();
+    response.headers.set("X-Conversation-Id", convId);
+    response.headers.set("X-Model-Used", modelName);
+
+    return response;
+  } catch (error) {
+    console.error("AI endpoint error:", error);
+    return c.json(
+      {
+        error: "AI request failed",
+        details: error instanceof Error ? error.message : "Unknown error",
+      },
+      500
+    );
+  }
 });
 
 app.get("/", (c) => {
-	return c.text("OK");
+  return c.text("OK");
 });
 
-export default app;
+// Configure Bun server with increased timeout for AI requests
+const port = process.env.PORT || 3000;
+export default {
+  port,
+  fetch: app.fetch,
+  idleTimeout: 60, // Increase to 60 seconds for AI requests
+} satisfies Bun.ServeOptions;

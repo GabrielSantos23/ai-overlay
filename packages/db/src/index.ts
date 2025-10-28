@@ -9,3 +9,6 @@ neonConfig.webSocketConstructor = ws;
 
 const sql = neon(process.env.DATABASE_URL || "");
 export const db = drizzle(sql);
+
+// Re-export query helpers to ensure a single drizzle-orm instance across packages
+export { eq, desc, asc, and } from "drizzle-orm";

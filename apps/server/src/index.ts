@@ -98,10 +98,15 @@ app.get("/", (c) => {
   return c.text("OK");
 });
 
-// Configure Bun server with increased timeout for AI requests
-const port = process.env.PORT || 3000;
-export default {
-  port,
-  fetch: app.fetch,
-  idleTimeout: 60, // Increase to 60 seconds for AI requests
-} satisfies Bun.ServeOptions;
+// Export for Vercel
+export default app.fetch;
+
+// Configure Bun server with increased timeout for AI requests (for local development)
+if (process.env.NODE_ENV !== "production") {
+  const port = process.env.PORT || 3000;
+  Bun.serve({
+    port,
+    fetch: app.fetch,
+    idleTimeout: 60, // Increase to 60 seconds for AI requests
+  });
+}

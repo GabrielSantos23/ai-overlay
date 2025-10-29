@@ -1,37 +1,27 @@
 {
   "$schema": "https://turbo.build/schema.json",
-  "pipeline": {
-    "@tauri-ai-overlay/db#build": {
-      "dependsOn": ["^build"],
-      "outputs": ["dist/**", "build/**"],
-      "env": [
-        "DATABASE_URL",
-        "BETTER_AUTH_SECRET",
-        "BETTER_AUTH_URL",
-        "CORS_ORIGIN",
-        "GOOGLE_GENERATIVE_AI_API_KEY",
-        "TAVILY_API_KEY"
-      ]
-    },
-    "@tauri-ai-overlay/auth#build": {
-      "dependsOn": ["^build"],
-      "outputs": ["dist/**", "build/**"],
-      "env": [
-        "DATABASE_URL",
-        "BETTER_AUTH_SECRET",
-        "BETTER_AUTH_URL",
-        "CORS_ORIGIN",
-        "GOOGLE_GENERATIVE_AI_API_KEY",
-        "TAVILY_API_KEY"
-      ]
-    }
-  },
   "ui": "tui",
+  "globalEnv": [
+    "DATABASE_URL",
+    "BETTER_AUTH_SECRET",
+    "BETTER_AUTH_URL",
+    "CORS_ORIGIN",
+    "GOOGLE_GENERATIVE_AI_API_KEY",
+    "TAVILY_API_KEY"
+  ],
   "tasks": {
     "build": {
       "dependsOn": ["^build"],
       "inputs": ["$TURBO_DEFAULT$", ".env*"],
-      "outputs": ["dist/**"]
+      "outputs": ["dist/**", "build/**"]
+    },
+    "@tauri-ai-overlay/db#build": {
+      "dependsOn": ["^build"],
+      "outputs": ["dist/**", "build/**"]
+    },
+    "@tauri-ai-overlay/auth#build": {
+      "dependsOn": ["^build"],
+      "outputs": ["dist/**", "build/**"]
     },
     "lint": {
       "dependsOn": ["^lint"]

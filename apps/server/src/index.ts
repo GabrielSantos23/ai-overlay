@@ -10,14 +10,14 @@ import { logger } from "hono/logger";
 
 // Add error handling for missing environment variables
 const requiredEnvVars = [
-  'DATABASE_URL',
-  'BETTER_AUTH_SECRET',
-  'GOOGLE_GENERATIVE_AI_API_KEY'
+  "DATABASE_URL",
+  "BETTER_AUTH_SECRET",
+  "GOOGLE_GENERATIVE_AI_API_KEY",
 ];
 
-const missingEnvVars = requiredEnvVars.filter(envVar => !process.env[envVar]);
+const missingEnvVars = requiredEnvVars.filter((envVar) => !process.env[envVar]);
 if (missingEnvVars.length > 0) {
-  console.error('Missing required environment variables:', missingEnvVars);
+  console.error("Missing required environment variables:", missingEnvVars);
 }
 
 const app = new Hono();
@@ -52,10 +52,12 @@ app.post("/ai", async (c) => {
     // Check for missing environment variables
     if (missingEnvVars.length > 0) {
       return c.json(
-        { 
-          error: "Server configuration error", 
-          details: `Missing environment variables: ${missingEnvVars.join(', ')}` 
-        }, 
+        {
+          error: "Server configuration error",
+          details: `Missing environment variables: ${missingEnvVars.join(
+            ", "
+          )}`,
+        },
         500
       );
     }
@@ -131,11 +133,11 @@ app.get("/health", (c) => {
       hasAuthSecret: !!process.env.BETTER_AUTH_SECRET,
       hasGoogleApiKey: !!process.env.GOOGLE_GENERATIVE_AI_API_KEY,
       hasTavilyApiKey: !!process.env.TAVILY_API_KEY,
-      corsOrigin: process.env.CORS_ORIGIN || "not set"
+      corsOrigin: process.env.CORS_ORIGIN || "not set",
     },
-    missingEnvVars: missingEnvVars
+    missingEnvVars: missingEnvVars,
   };
-  
+
   return c.json(health);
 });
 

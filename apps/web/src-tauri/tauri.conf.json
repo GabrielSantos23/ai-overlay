@@ -3,6 +3,7 @@
   "productName": "AI Overlay",
   "version": "0.1.0",
   "identifier": "com.gabs.aioverlay",
+
   "build": {
     "frontendDist": "../dist",
     "devUrl": "http://localhost:3001",
@@ -39,16 +40,20 @@
         "visible": true,
         "center": true,
         "url": "/main",
-        "decorations": false
+        "decorations": false,
+        "devtools": true
       }
     ],
     "security": {
-      "csp": null
+      "csp": "null",
+
+      "capabilities": ["default", "main-capability"]
     }
   },
   "bundle": {
     "active": true,
     "createUpdaterArtifacts": true,
+
     "targets": "all",
     "icon": [
       "icons/32x32.png",

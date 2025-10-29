@@ -29,6 +29,7 @@
     "@ai-sdk/google": "catalog:",
     "dotenv": "catalog:",
     "zod": "catalog:",
+    "nanoid": "catalog:",
     "@tauri-ai-overlay/auth": "workspace:*",
     "@tauri-ai-overlay/db": "workspace:*"
   }

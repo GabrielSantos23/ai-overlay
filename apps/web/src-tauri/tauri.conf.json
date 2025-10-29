@@ -1,6 +1,6 @@
 {
   "$schema": "../node_modules/@tauri-apps/cli/config.schema.json",
-  "productName": "AI Overlay",
+  "productName": "AI-Overlay",
   "version": "0.1.0",
   "identifier": "com.gabs.aioverlay",
 
@@ -67,7 +67,7 @@
     "updater": {
       "active": true,
       "endpoints": [
-        "https://your-update-server.com/{{target}}/{{current_version}}"
+        "https://updater-ai-overlay.vercel.app/{{target}}/{{arch}}/{{current_version}}"
       ],
       "dialog": true,
       "pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IEUwRjM4RkRDRjkyQkI1NkUKUldSdXRTdjUzSS96NE1ucThCaDltVkhLWFlJNDEvdkZqTFlQOFpQNDJaZ0FacVVFdERmSm1ZOWYK"

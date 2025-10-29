@@ -24,22 +24,6 @@ declare module "@tanstack/react-router" {
   }
 }
 
-// At the very top of main.tsx
-if (window.__TAURI__) {
-  console.log("Running in Tauri");
-  console.log("Server URL:", import.meta.env.VITE_SERVER_URL);
-
-  // Test fetch
-  import("@tauri-apps/plugin-http").then(({ fetch: tauriFetch }) => {
-    tauriFetch(`${import.meta.env.VITE_SERVER_URL}/trpc`)
-      .then((r) => console.log("Fetch test success:", r.status))
-      .catch((e) => {
-        console.error("Fetch test failed:", e);
-        alert(`Fetch test failed: ${e.message}`);
-      });
-  });
-}
-
 const rootElement = document.getElementById("app");
 
 if (!rootElement) {

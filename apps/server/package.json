@@ -25,6 +25,7 @@
   "devDependencies": {
     "typescript": "catalog:",
     "@types/bun": "^1.2.6",
+    "@types/node": "^20.0.0",
     "tsdown": "catalog:"
   }
 }

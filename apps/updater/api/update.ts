@@ -26,10 +26,10 @@ const SIGNATURES: Record<string, string> = {
 // 🔗 URLs dos binários no GitHub Releases
 // Em apps/updater/api/update.ts
 const DOWNLOAD_URLS: Record<string, string> = {
-  "linux-x86_64": `https://github.com/${GITHUB_REPO}/releases/download/${RELEASE_TAG}/AI%20Overlay_0.1.0_amd64.AppImage.tar.gz`,
-  "windows-x86_64": `https://github.com/${GITHUB_REPO}/releases/download/${RELEASE_TAG}/AI%20Overlay_0.1.0_x64-setup.exe`,
-  "darwin-x86_64": `https://github.com/${GITHUB_REPO}/releases/download/${RELEASE_TAG}/AI%20Overlay.app.tar.gz`,
-  "darwin-aarch64": `https://github.com/${GITHUB_REPO}/releases/download/${RELEASE_TAG}/AI%20Overlay.app.tar.gz`,
+  "linux-x86_64": `https://github.com/${GITHUB_REPO}/releases/download/${RELEASE_TAG}/AI-Overlay_0.1.0_amd64.AppImage.tar.gz`,
+  "windows-x86_64": `https://github.com/${GITHUB_REPO}/releases/download/${RELEASE_TAG}/AI-Overlay_0.1.0_x64-setup.exe`,
+  "darwin-x86_64": `https://github.com/${GITHUB_REPO}/releases/download/${RELEASE_TAG}/AI-Overlay.app.tar.gz`,
+  "darwin-aarch64": `https://github.com/${GITHUB_REPO}/releases/download/${RELEASE_TAG}/AI-Overlay.app.tar.gz`,
 };
 
 export default function handler(req: VercelRequest, res: VercelResponse) {

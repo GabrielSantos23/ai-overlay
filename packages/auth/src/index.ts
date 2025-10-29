@@ -9,7 +9,12 @@ export const auth = betterAuth<BetterAuthOptions>({
 
     schema: schema,
   }),
-  trustedOrigins: [process.env.CORS_ORIGIN || ""],
+  trustedOrigins: [
+    "http://localhost:3001",
+    "http://tauri.localhost",
+    "https://tauri.localhost",
+    ...(process.env.CORS_ORIGIN ? [process.env.CORS_ORIGIN] : []),
+  ],
   emailAndPassword: {
     enabled: true,
   },

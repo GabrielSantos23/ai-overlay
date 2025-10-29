@@ -24,17 +24,119 @@ const app = new Hono();
 
 app.use(logger());
 
+// Updated CORS configuration for Tauri
+const allowedOrigins = [
+  "http://localhost:3001",
+  "http://tauri.localhost",
+  "https://tauri.localhost",
+  "http://localhost:1420", // Tauri dev server default port
+  ...(process.env.CORS_ORIGIN && process.env.CORS_ORIGIN !== "*"
+    ? [process.env.CORS_ORIGIN]
+    : []),
+];
+
 app.use(
   "/*",
   cors({
-    origin: process.env.CORS_ORIGIN || "*",
-    allowMethods: ["GET", "POST", "OPTIONS"],
-    allowHeaders: ["Content-Type", "Authorization"],
+    origin: (origin) => {
+      console.log(`[CORS] Request from origin: ${origin}`);
+      console.log(`[CORS] Allowed origins:`, allowedOrigins);
+
+      // Allow requests with no origin (like curl, Postman)
+      if (!origin) {
+        console.log(`[CORS] No origin, allowing`);
+        return null;
+      }
+
+      // Check if origin is in allowed list
+      if (allowedOrigins.includes(origin)) {
+        console.log(`[CORS] Origin ${origin} is in allowed list`);
+        return origin;
+      }
+
+      // Fallback for development - allow any localhost
+      if (
+        origin.startsWith("http://localhost:") ||
+        origin.startsWith("http://127.0.0.1:")
+      ) {
+        console.log(`[CORS] Origin ${origin} matches localhost pattern`);
+        return origin;
+      }
+
+      // If CORS_ORIGIN is wildcard, allow all (not recommended for production)
+      if (process.env.CORS_ORIGIN === "*") {
+        console.log(`[CORS] Wildcard CORS_ORIGIN, allowing ${origin}`);
+        return origin;
+      }
+
+      console.log(`[CORS] Origin ${origin} not allowed`);
+      return null;
+    },
+    allowMethods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+    allowHeaders: ["Content-Type", "Authorization", "Cookie"],
     credentials: true,
+    exposeHeaders: ["X-Conversation-Id", "X-Model-Used"],
   })
 );
 
-app.on(["POST", "GET"], "/api/auth/*", (c) => auth.handler(c.req.raw));
+// Apply CORS specifically to auth routes
+app.use(
+  "/api/auth/*",
+  cors({
+    origin: (origin) => {
+      console.log(`[CORS-AUTH] Request from origin: ${origin}`);
+      console.log(`[CORS-AUTH] Allowed origins:`, allowedOrigins);
+
+      // Allow requests with no origin (like curl, Postman)
+      if (!origin) {
+        console.log(`[CORS-AUTH] No origin, allowing`);
+        return null;
+      }
+
+      // Check if origin is in allowed list
+      if (allowedOrigins.includes(origin)) {
+        console.log(`[CORS-AUTH] Origin ${origin} is in allowed list`);
+        return origin;
+      }
+
+      // Fallback for development - allow any localhost
+      if (
+        origin.startsWith("http://localhost:") ||
+        origin.startsWith("http://127.0.0.1:")
+      ) {
+        console.log(`[CORS-AUTH] Origin ${origin} matches localhost pattern`);
+        return origin;
+      }
+
+      // If CORS_ORIGIN is wildcard, allow all (not recommended for production)
+      if (process.env.CORS_ORIGIN === "*") {
+        console.log(`[CORS-AUTH] Wildcard CORS_ORIGIN, allowing ${origin}`);
+        return origin;
+      }
+
+      console.log(`[CORS-AUTH] Origin ${origin} not allowed`);
+      return null;
+    },
+    allowMethods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+    allowHeaders: ["Content-Type", "Authorization", "Cookie"],
+    credentials: true,
+    exposeHeaders: ["X-Conversation-Id", "X-Model-Used"],
+  })
+);
+
+app.on(["POST", "GET"], "/api/auth/*", async (c) => {
+  console.log(
+    `[AUTH] Handling auth request from origin: ${c.req.header("origin")}`
+  );
+  const response = await auth.handler(c.req.raw);
+  console.log(`[AUTH] Response status: ${response.status}`);
+  const headers: Record<string, string> = {};
+  response.headers.forEach((value, key) => {
+    headers[key] = value;
+  });
+  console.log(`[AUTH] Response headers:`, headers);
+  return response;
+});
 
 app.use(
   "/trpc/*",
@@ -134,6 +236,7 @@ app.get("/health", (c) => {
       hasGoogleApiKey: !!process.env.GOOGLE_GENERATIVE_AI_API_KEY,
       hasTavilyApiKey: !!process.env.TAVILY_API_KEY,
       corsOrigin: process.env.CORS_ORIGIN || "not set",
+      allowedOrigins: allowedOrigins,
     },
     missingEnvVars: missingEnvVars,
   };

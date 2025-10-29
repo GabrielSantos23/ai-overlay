@@ -8,6 +8,18 @@ import { Hono } from "hono";
 import { cors } from "hono/cors";
 import { logger } from "hono/logger";
 
+// Add error handling for missing environment variables
+const requiredEnvVars = [
+  'DATABASE_URL',
+  'BETTER_AUTH_SECRET',
+  'GOOGLE_GENERATIVE_AI_API_KEY'
+];
+
+const missingEnvVars = requiredEnvVars.filter(envVar => !process.env[envVar]);
+if (missingEnvVars.length > 0) {
+  console.error('Missing required environment variables:', missingEnvVars);
+}
+
 const app = new Hono();
 
 app.use(logger());
@@ -37,6 +49,17 @@ app.use(
 app.post("/ai", async (c) => {
   const startTime = Date.now();
   try {
+    // Check for missing environment variables
+    if (missingEnvVars.length > 0) {
+      return c.json(
+        { 
+          error: "Server configuration error", 
+          details: `Missing environment variables: ${missingEnvVars.join(', ')}` 
+        }, 
+        500
+      );
+    }
+
     const body = await c.req.json();
     const uiMessages = body.messages || [];
     const conversationId = body.conversationId;
@@ -96,6 +119,24 @@ app.post("/ai", async (c) => {
 
 app.get("/", (c) => {
   return c.text("OK");
+});
+
+app.get("/health", (c) => {
+  const health = {
+    status: "ok",
+    timestamp: new Date().toISOString(),
+    environment: {
+      nodeEnv: process.env.NODE_ENV,
+      hasDatabaseUrl: !!process.env.DATABASE_URL,
+      hasAuthSecret: !!process.env.BETTER_AUTH_SECRET,
+      hasGoogleApiKey: !!process.env.GOOGLE_GENERATIVE_AI_API_KEY,
+      hasTavilyApiKey: !!process.env.TAVILY_API_KEY,
+      corsOrigin: process.env.CORS_ORIGIN || "not set"
+    },
+    missingEnvVars: missingEnvVars
+  };
+  
+  return c.json(health);
 });
 
 // Export for Vercel

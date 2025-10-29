@@ -8,6 +8,7 @@ import { Hono } from "hono";
 import { cors } from "hono/cors";
 import { logger } from "hono/logger";
 
+
 // Add error handling for missing environment variables
 const requiredEnvVars = [
   "DATABASE_URL",
@@ -27,7 +28,7 @@ app.use(logger());
 app.use(
   "/*",
   cors({
-    origin: process.env.CORS_ORIGIN || "",
+    origin: process.env.CORS_ORIGIN || "*",
     allowMethods: ["GET", "POST", "OPTIONS"],
     allowHeaders: ["Content-Type", "Authorization"],
     credentials: true,

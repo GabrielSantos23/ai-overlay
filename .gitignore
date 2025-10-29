@@ -48,3 +48,7 @@ coverage
 .cache
 tmp
 temp
+
+# Updater
+updater/node_modules/
+updater/.vercel/

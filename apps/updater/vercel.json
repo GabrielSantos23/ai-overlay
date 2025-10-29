@@ -1,0 +1,8 @@
+{
+  "rewrites": [
+    {
+      "source": "/:target/:arch/:current_version",
+      "destination": "/api/update?target=:target&arch=:arch&current_version=:current_version"
+    }
+  ]
+}

@@ -8,7 +8,6 @@ import { Hono } from "hono";
 import { cors } from "hono/cors";
 import { logger } from "hono/logger";
 
-
 // Add error handling for missing environment variables
 const requiredEnvVars = [
   "DATABASE_URL",
@@ -143,7 +142,9 @@ app.get("/health", (c) => {
 });
 
 // Export for Vercel
-export default app.fetch;
+export default {
+  fetch: app.fetch.bind(app),
+};
 
 // Configure Bun server with increased timeout for AI requests (for local development only)
 if (process.env.NODE_ENV !== "production" && typeof Bun !== "undefined") {

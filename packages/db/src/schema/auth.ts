@@ -3,7 +3,6 @@ import {
   text,
   timestamp,
   boolean,
-  serial,
   jsonb,
   integer,
 } from "drizzle-orm/pg-core";

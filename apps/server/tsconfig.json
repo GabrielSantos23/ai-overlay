@@ -10,6 +10,6 @@
     "jsx": "react-jsx",
     "jsxImportSource": "hono/jsx",
     "lib": ["ESNext", "DOM"],
-    "types": ["bun", "node"]
+    "types": ["node", "bun"]
   }
 }

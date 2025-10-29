@@ -101,9 +101,9 @@ app.get("/", (c) => {
 // Export for Vercel
 export default app.fetch;
 
-// Configure Bun server with increased timeout for AI requests (for local development)
-if (process.env.NODE_ENV !== "production") {
-  const port = process.env.PORT || 3000;
+// Configure Bun server with increased timeout for AI requests (for local development only)
+if (process.env.NODE_ENV !== "production" && typeof Bun !== "undefined") {
+  const port = Number(process.env.PORT) || 3000;
   Bun.serve({
     port,
     fetch: app.fetch,

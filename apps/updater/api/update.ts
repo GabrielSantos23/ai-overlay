@@ -6,8 +6,8 @@ interface Platform {
 }
 
 // ⚙️ CONFIGURAÇÕES - ATUALIZE AQUI A CADA NOVA VERSÃO
-const LATEST_VERSION = "0.1.4";
-const RELEASE_NOTES = "Added theme toggle and start on log in";
+const LATEST_VERSION = "0.1.5";
+const RELEASE_NOTES = "changes on settings component";
 const PUB_DATE = new Date().toISOString();
 
 // 📦 Substitua pelos seus dados
@@ -18,7 +18,7 @@ const RELEASE_TAG = `v${LATEST_VERSION}`; // Ex: v1.0.0
 const SIGNATURES: Record<string, string> = {
   "linux-x86_64": "COLE_ASSINATURA_LINUX_AQUI",
   "windows-x86_64":
-    "dW50cnVzdGVkIGNvbW1lbnQ6IHNpZ25hdHVyZSBmcm9tIHRhdXJpIHNlY3JldCBrZXkKUlVUd3BvM3RMenNzeXlEbXg3eEU5U0wwbHBCWVFyTDRpdStOS1JXYVNhRHpiQzdRTXh4d2xQK01iVXFtVlBiQTd2Q0lhaEZhZnJsM0JPNVExZHZxUGVUQzZoZGpyNy9nS3dNPQp0cnVzdGVkIGNvbW1lbnQ6IHRpbWVzdGFtcDoxNzYxNzkwNDc3CWZpbGU6QUktT3ZlcmxheV8wLjEuNF94NjQtc2V0dXAuZXhlCjRuQnE5YjRNUEFwYWhBUHJLTlR1YmxRNGV0cWRNV0hrVG1UWlcyMmlvVjBYS3JveW5ZWmlIbmZMUjlSVU5WbTg3YTB2OS83QktPVjRPdXFXSlVYTUR3PT0K",
+    "dW50cnVzdGVkIGNvbW1lbnQ6IHNpZ25hdHVyZSBmcm9tIHRhdXJpIHNlY3JldCBrZXkKUlVUd3BvM3RMenNzeXdDTEVzalZ2K1lYdUNoSjlJYVI1K0djZzNXcWtuL05wMzluR0hkZlVxemdmeTNZNTNZVzdjc3RLSVA1b0NhaDJ1RDdoYlJSd1d5Rkc3aHdvSzg4OWc0PQp0cnVzdGVkIGNvbW1lbnQ6IHRpbWVzdGFtcDoxNzYxODYzMTI4CWZpbGU6QmFuZ2dfMC4xLjVfeDY0LXNldHVwLmV4ZQpvZ3RmT05CVWVlSG9MYkF5aVgyaDNscXlCSnJoRDRnQURkbUp6eDJVbzZkdkh4VldUQXlqMXBQdnBSNjV6TGtTWUIrYTRaWkdoR0tENTZmNjNmQlJDZz09Cg==",
   "darwin-x86_64": "COLE_ASSINATURA_MACOS_INTEL_AQUI",
   "darwin-aarch64": "COLE_ASSINATURA_MACOS_ARM_AQUI",
 };
@@ -26,10 +26,10 @@ const SIGNATURES: Record<string, string> = {
 // 🔗 URLs dos binários no GitHub Releases
 // Em apps/updater/api/update.ts
 const DOWNLOAD_URLS: Record<string, string> = {
-  "linux-x86_64": `https://github.com/${GITHUB_REPO}/releases/download/${RELEASE_TAG}/AI-Overlay_0.1.4_amd64.AppImage.tar.gz`,
-  "windows-x86_64": `https://github.com/${GITHUB_REPO}/releases/download/${RELEASE_TAG}/AI-Overlay_0.1.4_x64-setup.exe`,
-  "darwin-x86_64": `https://github.com/${GITHUB_REPO}/releases/download/${RELEASE_TAG}/AI-Overlay.app.tar.gz`,
-  "darwin-aarch64": `https://github.com/${GITHUB_REPO}/releases/download/${RELEASE_TAG}/AI-Overlay.app.tar.gz`,
+  "linux-x86_64": `https://github.com/${GITHUB_REPO}/releases/download/${RELEASE_TAG}/Bangg_0.1.5_amd64.AppImage.tar.gz`,
+  "windows-x86_64": `https://github.com/${GITHUB_REPO}/releases/download/${RELEASE_TAG}/Bangg_0.1.5_x64-setup.exe`,
+  "darwin-x86_64": `https://github.com/${GITHUB_REPO}/releases/download/${RELEASE_TAG}/Bangg.app.tar.gz`,
+  "darwin-aarch64": `https://github.com/${GITHUB_REPO}/releases/download/${RELEASE_TAG}/Bangg.app.tar.gz`,
 };
 
 export default function handler(req: VercelRequest, res: VercelResponse) {

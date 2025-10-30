@@ -3,6 +3,45 @@
 version = 3
 
 [[package]]
+name = "Bangg"
+version = "0.1.5"
+dependencies = [
+ "anyhow",
+ "base64 0.21.7",
+ "cpal",
+ "dotenv",
+ "futures-util",
+ "hound",
+ "image 0.25.8",
+ "log",
+ "once_cell",
+ "reqwest 0.12.24",
+ "ringbuf",
+ "screenshots",
+ "serde",
+ "serde_json",
+ "tauri",
+ "tauri-build",
+ "tauri-plugin-autostart",
+ "tauri-plugin-deep-link",
+ "tauri-plugin-global-shortcut",
+ "tauri-plugin-http",
+ "tauri-plugin-keychain",
+ "tauri-plugin-log",
+ "tauri-plugin-machine-uid",
+ "tauri-plugin-opener",
+ "tauri-plugin-polygon",
+ "tauri-plugin-posthog",
+ "tauri-plugin-process",
+ "tauri-plugin-shell",
+ "tauri-plugin-single-instance",
+ "tauri-plugin-updater",
+ "tokio",
+ "tracing",
+ "xcap",
+]
+
+[[package]]
 name = "Inflector"
 version = "0.11.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -121,45 +160,6 @@ name = "anyhow"
 version = "1.0.100"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "a23eb6b1614318a8071c9b2521f36b424b2c83db5eb3a0fead4a6c0809af6e61"
-
-[[package]]
-name = "app"
-version = "0.1.4"
-dependencies = [
- "anyhow",
- "base64 0.21.7",
- "cpal",
- "dotenv",
- "futures-util",
- "hound",
- "image 0.25.8",
- "log",
- "once_cell",
- "reqwest 0.12.24",
- "ringbuf",
- "screenshots",
- "serde",
- "serde_json",
- "tauri",
- "tauri-build",
- "tauri-plugin-autostart",
- "tauri-plugin-deep-link",
- "tauri-plugin-global-shortcut",
- "tauri-plugin-http",
- "tauri-plugin-keychain",
- "tauri-plugin-log",
- "tauri-plugin-machine-uid",
- "tauri-plugin-opener",
- "tauri-plugin-polygon",
- "tauri-plugin-posthog",
- "tauri-plugin-process",
- "tauri-plugin-shell",
- "tauri-plugin-single-instance",
- "tauri-plugin-updater",
- "tokio",
- "tracing",
- "xcap",
-]
 
 [[package]]
 name = "arbitrary"

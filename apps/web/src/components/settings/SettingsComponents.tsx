@@ -20,10 +20,12 @@ import {
   Palette,
   ChevronDown,
   Eye,
+  BookOpen,
 } from "lucide-react";
 import { check } from "@tauri-apps/plugin-updater";
 import { relaunch } from "@tauri-apps/plugin-process";
 import { errorToast, InfoToast, successToast } from "@/lib/exportCustomToast";
+import { GeneralSettings } from "./GeneralSettings";
 const menuItems = [
   { id: "general", title: "General", icon: Settings },
   { id: "calendar", title: "Calendar", icon: Calendar },
@@ -35,193 +37,11 @@ const menuItems = [
 
 const supportItems = [
   { id: "tutorial", title: "Cluely Tutorial", icon: GraduationCap },
-  { id: "changelog", title: "Changelog", icon: HelpCircle },
+  { id: "changelog", title: "Changelog", icon: BookOpen },
   { id: "help", title: "Help Center", icon: HelpCircle },
   { id: "bug", title: "Report a bug", icon: Bug },
 ];
 
-export const GeneralSettings = () => {
-  const [detectable, setDetectable] = useState(true);
-  const [openOnLogin, setOpenOnLogin] = useState(true);
-  const [advancedOpen, setAdvancedOpen] = useState(false);
-  const [updating, setUpdating] = useState(false);
-
-  // ✅ define async function for checking update
-  const handleCheckForUpdate = async () => {
-    try {
-      setUpdating(true);
-      const update = await check();
-
-      if (!update) {
-        InfoToast("No updates available.");
-        return;
-      }
-
-      console.log(`Update ${update.version} found (${update.date})`);
-      InfoToast(`Update ${update.version} found (${update.date})`);
-      console.log(`Release notes: ${update.body}`);
-
-      let downloaded = 0;
-      let contentLength = 0;
-
-      await update.downloadAndInstall((event) => {
-        switch (event.event) {
-          case "Started":
-            contentLength = event.data.contentLength;
-            console.log(`Downloading ${contentLength} bytes`);
-            break;
-          case "Progress":
-            downloaded += event.data.chunkLength;
-            console.log(`Downloaded ${downloaded} of ${contentLength}`);
-            break;
-          case "Finished":
-            console.log("Download finished");
-            break;
-        }
-      });
-
-      console.log("Update installed successfully!");
-      successToast("Updated successfully!");
-      await relaunch(); // restart app
-    } catch (error) {
-      console.error("Update check failed:", error);
-      errorToast("Failed to check for updates.");
-    } finally {
-      setUpdating(false);
-    }
-  };
-
-  return (
-    <div className="flex-1 overflow-y-auto">
-      {/* Detectable Section */}
-      <div className="border-b border-gray-800 p-6">
-        <div className="flex items-start justify-between">
-          <div className="flex items-start gap-3">
-            <Eye className="w-5 h-5 text-gray-400 mt-1" />
-            <div className="flex-1">
-              <h3 className="text-lg font-semibold text-white mb-1">
-                Detectable
-              </h3>
-              <p className="text-sm text-gray-400">
-                Cluely is currently detectable by screen-sharing.{" "}
-                <span className="text-blue-400 cursor-pointer hover:underline">
-                  Limitations here
-                </span>
-              </p>
-            </div>
-          </div>
-          <Switch
-            checked={detectable}
-            onCheckedChange={setDetectable}
-            className="ml-4"
-          />
-        </div>
-      </div>
-
-      {/* General settings Section */}
-      <div className="p-6 space-y-6">
-        <div>
-          <h3 className="text-base font-semibold text-white mb-1">
-            General settings
-          </h3>
-          <p className="text-sm text-gray-400">
-            Customize how Cluely works for you
-          </p>
-        </div>
-
-        {/* Open Cluely when you log in */}
-        <div className="flex items-start justify-between">
-          <div className="flex items-start gap-3">
-            <Power className="w-5 h-5 text-gray-400 mt-1" />
-            <div className="flex-1">
-              <h4 className="text-base font-medium text-white mb-1">
-                Open Cluely when you log in
-              </h4>
-              <p className="text-sm text-gray-400">
-                Cluely will open automatically when you log in to your computer
-              </p>
-            </div>
-          </div>
-          <Switch
-            checked={openOnLogin}
-            onCheckedChange={setOpenOnLogin}
-            className="ml-4"
-          />
-        </div>
-
-        {/* Theme */}
-        <div className="flex items-start justify-between">
-          <div className="flex items-start gap-3">
-            <Palette className="w-5 h-5 text-gray-400 mt-1" />
-            <div className="flex-1">
-              <h4 className="text-base font-medium text-white mb-1">Theme</h4>
-              <p className="text-sm text-gray-400">
-                Customize how Cluely looks on your device
-              </p>
-            </div>
-          </div>
-          <select className="ml-4 bg-gray-800 text-white border border-gray-700 rounded px-3 py-1.5 text-sm">
-            <option>System Preference</option>
-            <option>Light</option>
-            <option>Dark</option>
-          </select>
-        </div>
-
-        {/* Check for updates */}
-        <div className="flex items-start justify-between">
-          <div className="flex items-start gap-3">
-            <div className="w-8 h-8 bg-green-500 rounded-full flex items-center justify-center mt-0.5">
-              <div className="text-white font-bold">↑</div>
-            </div>
-            <div className="flex-1">
-              <h4 className="text-base font-medium text-white mb-1">
-                Check for updates
-              </h4>
-              <p className="text-sm text-gray-400">
-                Make sure you’re running the latest version of Cluely.
-              </p>
-            </div>
-          </div>
-          <Button
-            variant="outline"
-            className="ml-4 bg-gray-800 border-gray-700 text-white hover:bg-gray-700"
-            onClick={handleCheckForUpdate}
-            disabled={updating}
-          >
-            {updating ? "Checking..." : "Check for updates"}
-          </Button>
-        </div>
-      </div>
-
-      {/* Advanced Section */}
-      <div className="border-t border-gray-800">
-        <button
-          onClick={() => setAdvancedOpen(!advancedOpen)}
-          className="w-full flex items-center justify-between p-6 hover:bg-gray-800/50 transition-colors"
-        >
-          <div>
-            <h3 className="text-base font-semibold text-white text-left mb-1">
-              Advanced
-            </h3>
-            <p className="text-sm text-gray-400 text-left">
-              Configure experimental Cluely features
-            </p>
-          </div>
-          <ChevronDown
-            className={`w-5 h-5 text-gray-400 transition-transform ${
-              advancedOpen ? "rotate-180" : ""
-            }`}
-          />
-        </button>
-        {advancedOpen && (
-          <div className="px-6 pb-6 text-sm text-gray-400">
-            Advanced settings content would go here...
-          </div>
-        )}
-      </div>
-    </div>
-  );
-};
 // Placeholder Components
 const CalendarSettings = () => (
   <div className="p-6">
@@ -318,17 +138,17 @@ export const SettingsComponent = ({ open, onOpenChange }) => {
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="w-[80vw]! [&>button]:hidden max-w-none! h-[80vh]! max-h-[80vh]! p-0  border border-muted ">
+      <DialogContent className="!w-[90vw]! max-w-[90vw]!   [&>button]:hidden  bg-card h-[80vh]! max-h-[80vh]! p-0  border border-muted ">
         <div className="flex h-full">
           {/* Sidebar */}
-          <div className="w-64  border-r  flex flex-col">
+          <div className="w-64    flex flex-col">
             {/* Close button */}
-            <div className="p-4 border-b border-gray-800">
+            <div className="p-4 ">
               <button
                 onClick={() => onOpenChange(false)}
-                className="w-8 h-8 flex items-center justify-center rounded hover:bg-gray-800 transition-colors"
+                className="w-8 h-8 flex items-center justify-center rounded hover:bg-muted transition-colors"
               >
-                <X className="w-5 h-5 text-gray-400" />
+                <X className="w-5 h-5 text-muted-foreground" />
               </button>
             </div>
 
@@ -341,10 +161,10 @@ export const SettingsComponent = ({ open, onOpenChange }) => {
                     <button
                       key={item.id}
                       onClick={() => setActiveSection(item.id)}
-                      className={`w-full flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-colors ${
+                      className={`w-full flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-colors group ${
                         activeSection === item.id
-                          ? " text-white"
-                          : "text-gray-400 hover:bg-gray-800/50 hover:text-white"
+                          ? "  bg-secondary rounded-full text-card-foreground "
+                          : "text-muted-foreground hover:bg-secondary hover:text-muted-foreground"
                       }`}
                     >
                       <Icon className="w-4 h-4" />
@@ -356,7 +176,7 @@ export const SettingsComponent = ({ open, onOpenChange }) => {
 
               {/* Support Section */}
               <div className="mt-6 px-3">
-                <div className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2 px-3">
+                <div className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-2 px-3">
                   Support
                 </div>
                 <nav className="space-y-1">
@@ -368,8 +188,8 @@ export const SettingsComponent = ({ open, onOpenChange }) => {
                         onClick={() => setActiveSection(item.id)}
                         className={`w-full flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-colors ${
                           activeSection === item.id
-                            ? "bg-gray-800 text-white"
-                            : "text-gray-400 hover:bg-gray-800/50 hover:text-white"
+                            ? "bg-secondary text-card-foreground"
+                            : "text-muted-foreground hover:bg-secondary hover:text-muted-foreground"
                         }`}
                       >
                         <Icon className="w-4 h-4" />
@@ -382,25 +202,22 @@ export const SettingsComponent = ({ open, onOpenChange }) => {
             </div>
 
             {/* Bottom Actions */}
-            <div className="border-t border-gray-800 p-3 space-y-1">
-              <button className="w-full flex items-center gap-3 px-3 py-2 rounded-lg text-sm text-gray-400 hover:bg-gray-800/50 hover:text-white transition-colors">
+            <div className=" p-3 space-y-1">
+              <button className="w-full flex items-center gap-3 px-3 py-2 rounded-lg text-sm text-muted-foreground hover:bg-secondary hover:text-card-foreground transition-colors">
                 <LogOut className="w-4 h-4" />
                 <span>Sign out</span>
               </button>
-              <button className="w-full flex items-center gap-3 px-3 py-2 rounded-lg text-sm text-gray-400 hover:bg-gray-800/50 hover:text-white transition-colors">
+              <button className="w-full flex items-center gap-3 px-3 py-2 rounded-lg text-sm text-muted-foreground hover:bg-secondary hover:text-card-foreground transition-colors">
                 <Power className="w-4 h-4" />
                 <span>Quit Cluely</span>
               </button>
             </div>
-
-            {/* Version */}
-            <div className="px-6 py-3 text-xs text-gray-600 text-center border-t border-gray-800">
-              About v1.72.0
-            </div>
           </div>
 
           {/* Main Content */}
-          <div className="flex-1 flex flex-col ">{renderContent()}</div>
+          <div className="flex-1 flex flex-col bg-card h-[80vh] rounded-lg ">
+            {renderContent()}
+          </div>
         </div>
       </DialogContent>
     </Dialog>

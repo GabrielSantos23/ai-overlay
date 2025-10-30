@@ -2,6 +2,78 @@
 @import "tw-animate-css";
 @source "../node_modules/streamdown/dist/index.js";
 
+@font-face {
+    font-family: "SF Pro Display";
+    src: url("@fonts/SFPRODISPLAYTHINITALIC.OTF") format("opentype");
+    font-weight: 100;
+    font-style: italic;
+    font-display: swap;
+}
+
+@font-face {
+    font-family: "SF Pro Display";
+    src: url("@fonts/SFPRODISPLAYULTRALIGHTITALIC.OTF") format("opentype");
+    font-weight: 200;
+    font-style: italic;
+    font-display: swap;
+}
+
+@font-face {
+    font-family: "SF Pro Display";
+    src: url("@fonts/SFPRODISPLAYLIGHTITALIC.OTF") format("opentype");
+    font-weight: 300;
+    font-style: italic;
+    font-display: swap;
+}
+
+@font-face {
+    font-family: "SF Pro Display";
+    src: url("@fonts/SFPRODISPLAYREGULAR.OTF") format("opentype");
+    font-weight: 400;
+    font-style: normal;
+    font-display: swap;
+}
+
+@font-face {
+    font-family: "SF Pro Display";
+    src: url("@fonts/SFPRODISPLAYMEDIUM.OTF") format("opentype");
+    font-weight: 500;
+    font-style: normal;
+    font-display: swap;
+}
+
+@font-face {
+    font-family: "SF Pro Display";
+    src: url("@fonts/SFPRODISPLAYSEMIBOLDITALIC.OTF") format("opentype");
+    font-weight: 600;
+    font-style: italic;
+    font-display: swap;
+}
+
+@font-face {
+    font-family: "SF Pro Display";
+    src: url("@fonts/SFPRODISPLAYBOLD.OTF") format("opentype");
+    font-weight: 700;
+    font-style: normal;
+    font-display: swap;
+}
+
+@font-face {
+    font-family: "SF Pro Display";
+    src: url("@fonts/SFPRODISPLAYHEAVYITALIC.OTF") format("opentype");
+    font-weight: 800;
+    font-style: italic;
+    font-display: swap;
+}
+
+@font-face {
+    font-family: "SF Pro Display";
+    src: url("@fonts/SFPRODISPLAYBLACKITALIC.OTF") format("opentype");
+    font-weight: 900;
+    font-style: italic;
+    font-display: swap;
+}
+
 @custom-variant dark (&:where(.dark, .dark *));
 
 html,
@@ -51,7 +123,10 @@ body {
     --sidebar-accent-foreground: #171717;
     --sidebar-border: #e5e5e5;
     --sidebar-ring: #a1a1a1;
-    --font-sans: Outfit, sans-serif;
+    --font-sans:
+        "SF Pro Display", ui-sans-serif, system-ui, -apple-system, Segoe UI,
+        Roboto, Helvetica, Arial, "Apple Color Emoji", "Segoe UI Emoji",
+        "Segoe UI Symbol";
     --font-serif: ui-serif, Georgia, Cambria, "Times New Roman", Times, serif;
     --font-mono: monospace;
     --radius: 0.5rem;
@@ -79,61 +154,64 @@ body {
 }
 
 .dark {
-    --background: #0a0a0a;
-    --foreground: #fafafa;
+    --background: #111111;
+    --foreground: #eeeeee;
     --card: #191919;
-    --card-foreground: #fafafa;
-    --popover: #262626;
-    --popover-foreground: #fafafa;
-    --primary: #737373;
-    --primary-foreground: #fafafa;
+    --card-foreground: #eeeeee;
+    --popover: #191919;
+    --popover-foreground: #eeeeee;
+    --primary: #3377ff;
+    --primary-foreground: #171717;
     --secondary: #262626;
-    --secondary-foreground: #fafafa;
-    --muted: #262626;
-    --muted-foreground: #a1a1a1;
-    --accent: #404040;
-    --accent-foreground: #fafafa;
-    --destructive: #ff6467;
-    --destructive-foreground: #262626;
-    --border: #383838;
-    --input: #525252;
+    --secondary-foreground: #3377ff;
+    --muted: #222222;
+    --muted-foreground: #b4b4b4;
+    --accent: #2a2a2a;
+    --accent-foreground: #eeeeee;
+    --destructive: #fb2c36;
+    --destructive-foreground: #ffffff;
+    --border: #282828;
+    --input: #343434;
     --ring: #737373;
-    --chart-1: #737373;
-    --chart-2: #737373;
-    --chart-3: #737373;
-    --chart-4: #737373;
-    --chart-5: #737373;
-    --sidebar: #171717;
+    --chart-1: #91c5ff;
+    --chart-2: #3a81f6;
+    --chart-3: #2563ef;
+    --chart-4: #1a4eda;
+    --chart-5: #1f3fad;
+    --sidebar: #18181b;
     --sidebar-foreground: #fafafa;
-    --sidebar-primary: #fafafa;
-    --sidebar-primary-foreground: #171717;
-    --sidebar-accent: #262626;
-    --sidebar-accent-foreground: #fafafa;
-    --sidebar-border: #ffffff;
-    --sidebar-ring: #525252;
-    --font-sans: Outfit, sans-serif;
+    --sidebar-primary: #1d4ed8;
+    --sidebar-primary-foreground: #ffffff;
+    --sidebar-accent: #27272a;
+    --sidebar-accent-foreground: #f4f4f5;
+    --sidebar-border: #27272a;
+    --sidebar-ring: #d4d4d8;
+    --font-sans:
+        "SF Pro Display", ui-sans-serif, system-ui, -apple-system, Segoe UI,
+        Roboto, Helvetica, Arial, "Apple Color Emoji", "Segoe UI Emoji",
+        "Segoe UI Symbol";
     --font-serif: ui-serif, Georgia, Cambria, "Times New Roman", Times, serif;
     --font-mono: monospace;
     --radius: 0.5rem;
-    --shadow-x: 0px;
+    --shadow-x: 0;
     --shadow-y: 1px;
-    --shadow-blur: 0px;
+    --shadow-blur: 3px;
     --shadow-spread: 0px;
-    --shadow-opacity: 0;
-    --shadow-color: hsl(0 0% 0%);
-    --shadow-2xs: 0px 1px 0px 0px hsl(0 0% 0% / 0);
-    --shadow-xs: 0px 1px 0px 0px hsl(0 0% 0% / 0);
+    --shadow-opacity: 0.1;
+    --shadow-color: oklch(0 0 0);
+    --shadow-2xs: 0 1px 3px 0px hsl(0 0% 0% / 0.05);
+    --shadow-xs: 0 1px 3px 0px hsl(0 0% 0% / 0.05);
     --shadow-sm:
-        0px 1px 0px 0px hsl(0 0% 0% / 0), 0px 1px 2px -1px hsl(0 0% 0% / 0);
+        0 1px 3px 0px hsl(0 0% 0% / 0.1), 0 1px 2px -1px hsl(0 0% 0% / 0.1);
     --shadow:
-        0px 1px 0px 0px hsl(0 0% 0% / 0), 0px 1px 2px -1px hsl(0 0% 0% / 0);
+        0 1px 3px 0px hsl(0 0% 0% / 0.1), 0 1px 2px -1px hsl(0 0% 0% / 0.1);
     --shadow-md:
-        0px 1px 0px 0px hsl(0 0% 0% / 0), 0px 2px 4px -1px hsl(0 0% 0% / 0);
+        0 1px 3px 0px hsl(0 0% 0% / 0.1), 0 2px 4px -1px hsl(0 0% 0% / 0.1);
     --shadow-lg:
-        0px 1px 0px 0px hsl(0 0% 0% / 0), 0px 4px 6px -1px hsl(0 0% 0% / 0);
+        0 1px 3px 0px hsl(0 0% 0% / 0.1), 0 4px 6px -1px hsl(0 0% 0% / 0.1);
     --shadow-xl:
-        0px 1px 0px 0px hsl(0 0% 0% / 0), 0px 8px 10px -1px hsl(0 0% 0% / 0);
-    --shadow-2xl: 0px 1px 0px 0px hsl(0 0% 0% / 0);
+        0 1px 3px 0px hsl(0 0% 0% / 0.1), 0 8px 10px -1px hsl(0 0% 0% / 0.1);
+    --shadow-2xl: 0 1px 3px 0px hsl(0 0% 0% / 0.25);
 }
 
 @theme inline {

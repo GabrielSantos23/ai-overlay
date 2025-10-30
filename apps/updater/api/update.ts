@@ -6,7 +6,7 @@ interface Platform {
 }
 
 // ⚙️ CONFIGURAÇÕES - ATUALIZE AQUI A CADA NOVA VERSÃO
-const LATEST_VERSION = "0.1.2";
+const LATEST_VERSION = "0.1.3";
 const RELEASE_NOTES = "Better ui on configurations";
 const PUB_DATE = new Date().toISOString();
 
@@ -18,7 +18,7 @@ const RELEASE_TAG = `v${LATEST_VERSION}`; // Ex: v1.0.0
 const SIGNATURES: Record<string, string> = {
   "linux-x86_64": "COLE_ASSINATURA_LINUX_AQUI",
   "windows-x86_64":
-    "dW50cnVzdGVkIGNvbW1lbnQ6IHNpZ25hdHVyZSBmcm9tIHRhdXJpIHNlY3JldCBrZXkKUlVUd3BvM3RMenNzeTFDQ0k1Q2VaYkt0UWM2ZldRWXFpL3lZR3VLTm1IWGp4dXc2QmtRRzFuRmNIODFKVmpFQnJYS2pNNjNrNU8rR3Y0dHhyR1l4Yk5JU0gwN2tSSndUK1FFPQp0cnVzdGVkIGNvbW1lbnQ6IHRpbWVzdGFtcDoxNzYxNzg3OTkzCWZpbGU6QUktT3ZlcmxheV8wLjEuMl94NjQtc2V0dXAuZXhlCnh6UDlVMUFXUlVYbHY2RUFSQ09LK3haRkNoWDhZd1VxOUVOSDVWVHRUd0lEYkcwdC9mTHhCbG5ZY2NCWFVtYndDTVBVdHY0ckZqeGhBRGNSaEVhaUJRPT0K",
+    "dW50cnVzdGVkIGNvbW1lbnQ6IHNpZ25hdHVyZSBmcm9tIHRhdXJpIHNlY3JldCBrZXkKUlVUd3BvM3RMenNzeTVoWUNWdXVnd0M3THZ3OUpaNHh3QUFWM1lJeFQ4TzBQNk1WSnBvTGRuNzhqY0kxR0x2d0ViYXVmY1NyYmozS05STklBNWsyYVpQanYyVUgyNDZtOFEwPQp0cnVzdGVkIGNvbW1lbnQ6IHRpbWVzdGFtcDoxNzYxNzg4MjY5CWZpbGU6QUktT3ZlcmxheV8wLjEuM194NjQtc2V0dXAuZXhlCk5PZUppeHRaZlZ3ZG9sbDE3Wm9HdnNESVlxWVpCWFlST0lCQ3QrbXJyZFQwNWVYdHplVEN5MTRNdG9OelQxMXVVd2cxekp5ampGRnlrWUZnRUNnV0NnPT0K",
   "darwin-x86_64": "COLE_ASSINATURA_MACOS_INTEL_AQUI",
   "darwin-aarch64": "COLE_ASSINATURA_MACOS_ARM_AQUI",
 };
@@ -26,8 +26,8 @@ const SIGNATURES: Record<string, string> = {
 // 🔗 URLs dos binários no GitHub Releases
 // Em apps/updater/api/update.ts
 const DOWNLOAD_URLS: Record<string, string> = {
-  "linux-x86_64": `https://github.com/${GITHUB_REPO}/releases/download/${RELEASE_TAG}/AI-Overlay_0.1.2_amd64.AppImage.tar.gz`,
-  "windows-x86_64": `https://github.com/${GITHUB_REPO}/releases/download/${RELEASE_TAG}/AI-Overlay_0.1.2_x64-setup.exe`,
+  "linux-x86_64": `https://github.com/${GITHUB_REPO}/releases/download/${RELEASE_TAG}/AI-Overlay_0.1.3_amd64.AppImage.tar.gz`,
+  "windows-x86_64": `https://github.com/${GITHUB_REPO}/releases/download/${RELEASE_TAG}/AI-Overlay_0.1.3_x64-setup.exe`,
   "darwin-x86_64": `https://github.com/${GITHUB_REPO}/releases/download/${RELEASE_TAG}/AI-Overlay.app.tar.gz`,
   "darwin-aarch64": `https://github.com/${GITHUB_REPO}/releases/download/${RELEASE_TAG}/AI-Overlay.app.tar.gz`,
 };

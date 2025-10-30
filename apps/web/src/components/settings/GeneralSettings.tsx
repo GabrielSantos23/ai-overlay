@@ -25,12 +25,17 @@ import {
   DropdownMenuTrigger,
 } from "../ui/dropdown-menu";
 import { Progress } from "../ui/progress";
+import { enable, isEnabled, disable } from "@tauri-apps/plugin-autostart";
+import { errorToast, InfoToast, successToast } from "@/lib/exportCustomToast";
+import { useTheme } from "next-themes";
 
 export const GeneralSettings = () => {
   const [detectable, setDetectable] = useState(true);
-  const [openOnLogin, setOpenOnLogin] = useState(true);
+  const [openOnLogin, setOpenOnLogin] = useState(false);
+  const [isLoadingAutostart, setIsLoadingAutostart] = useState(false);
   const [advancedOpen, setAdvancedOpen] = useState(false);
   const [appVersion, setAppVersion] = useState<string>("");
+  const { theme, setTheme } = useTheme();
 
   const {
     isChecking,
@@ -54,15 +59,87 @@ export const GeneralSettings = () => {
       }
     };
 
+    const checkAutostart = async () => {
+      try {
+        const enabled = await isEnabled();
+        setOpenOnLogin(enabled);
+      } catch (error) {
+        console.error("Failed to check autostart status:", error);
+        errorToast("Failed to check autostart status");
+      }
+    };
+
     fetchVersion();
+    checkAutostart();
   }, []);
 
+  const handleAutostartToggle = async (checked: boolean) => {
+    setIsLoadingAutostart(true);
+
+    try {
+      if (checked) {
+        await enable();
+        setOpenOnLogin(true);
+        successToast(
+          "Autostart enabled",
+          "Cluely will open automatically when you log in",
+        );
+      } else {
+        await disable();
+        setOpenOnLogin(false);
+        successToast(
+          "Autostart disabled",
+          "Cluely will not open automatically on login",
+        );
+      }
+    } catch (error) {
+      console.error("Failed to toggle autostart:", error);
+      errorToast(
+        "Failed to update autostart",
+
+        error instanceof Error ? error.message : "Unknown error occurred",
+      );
+
+      setOpenOnLogin(!checked);
+    } finally {
+      setIsLoadingAutostart(false);
+    }
+  };
+
   const handleCheckUpdate = async () => {
-    await checkForUpdates();
+    try {
+      await checkForUpdates();
+      if (!updateAvailable) {
+        successToast(
+          "You're up to date!",
+          "You're running the latest version of Cluely",
+        );
+      }
+    } catch (error) {
+      console.error("Failed to check for updates:", error);
+      errorToast("Failed to check for updates", "Please try again later");
+    }
   };
 
   const handleDownloadUpdate = async () => {
-    await downloadAndInstall();
+    try {
+      await downloadAndInstall();
+      successToast(
+        "Update installed successfully",
+        "Cluely will restart to apply the update",
+      );
+    } catch (error) {
+      console.error("Failed to download update:", error);
+      errorToast(
+        "Failed to download update",
+        error instanceof Error ? error.message : "Unknown error occurred",
+      );
+    }
+  };
+
+  const handleCancelUpdate = () => {
+    cancelUpdate();
+    InfoToast("Update cancelled", "You can check for updates again later");
   };
 
   return (
@@ -120,7 +197,8 @@ export const GeneralSettings = () => {
           </div>
           <Switch
             checked={openOnLogin}
-            onCheckedChange={setOpenOnLogin}
+            onCheckedChange={handleAutostartToggle}
+            disabled={isLoadingAutostart}
             className="ml-4"
           />
         </div>
@@ -147,21 +225,36 @@ export const GeneralSettings = () => {
                 variant="outline"
                 className="ml-4 bg-secondary border text-card-foreground hover:bg-secondary/70 flex items-center gap-2"
               >
-                <Palette className="w-4 h-4" />
-                <span>System</span>
+                {theme === "light" ? (
+                  <SunDim className="w-4 h-4" />
+                ) : theme === "dark" ? (
+                  <Moon className="w-4 h-4" />
+                ) : (
+                  <Monitor className="w-4 h-4" />
+                )}
+                <span className="capitalize">{theme || "System"}</span>
                 <ChevronDown className="w-4 h-4 opacity-70" />
               </Button>
             </DropdownMenuTrigger>
 
             <DropdownMenuContent align="end" className="w-40">
               <DropdownMenuLabel>Theme</DropdownMenuLabel>
-              <DropdownMenuItem className="flex items-center gap-2 cursor-pointer">
+              <DropdownMenuItem
+                onClick={() => setTheme("system")}
+                className="flex items-center gap-2 cursor-pointer"
+              >
                 <Monitor /> System Preference
               </DropdownMenuItem>
-              <DropdownMenuItem className="flex items-center gap-2 cursor-pointer">
+              <DropdownMenuItem
+                onClick={() => setTheme("light")}
+                className="flex items-center gap-2 cursor-pointer"
+              >
                 <SunDim /> Light
               </DropdownMenuItem>
-              <DropdownMenuItem className="flex items-center gap-2 cursor-pointer">
+              <DropdownMenuItem
+                onClick={() => setTheme("dark")}
+                className="flex items-center gap-2 cursor-pointer"
+              >
                 <Moon className="fill-card-foreground" /> Dark
               </DropdownMenuItem>
             </DropdownMenuContent>
@@ -214,7 +307,7 @@ export const GeneralSettings = () => {
                 <Button
                   variant="outline"
                   className="bg-secondary border text-card-foreground hover:bg-secondary/70"
-                  onClick={cancelUpdate}
+                  onClick={handleCancelUpdate}
                   disabled={isDownloading || isInstalling}
                 >
                   Cancel

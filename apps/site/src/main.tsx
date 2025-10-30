@@ -5,6 +5,7 @@ import { Home } from "./routes/Home";
 import { About } from "./routes/About";
 import { Login } from "./routes/Login";
 import { AuthCallback } from "./routes/AuthCallback";
+import { Account } from "./routes/Account";
 
 const router = createBrowserRouter([
   {
@@ -15,6 +16,7 @@ const router = createBrowserRouter([
       { path: "about", element: <About /> },
       { path: "login", element: <Login /> },
       { path: "auth/callback", element: <AuthCallback /> },
+      { path: "account", element: <Account /> },
     ],
   },
 ]);

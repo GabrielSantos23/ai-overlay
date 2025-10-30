@@ -1,13 +1,16 @@
+// src-tauri/src/lib.rs
 mod capture;
 mod shortcuts;
 mod window;
 use std::sync::{Arc, Mutex};
+use tauri::Emitter;
 use tauri::Manager;
 use tauri_plugin_posthog::{init as posthog_init, PostHogConfig, PostHogOptions};
 use tokio::task::JoinHandle;
 mod speaker;
 use capture::CaptureState;
 use speaker::VadConfig;
+use tauri_plugin_deep_link::DeepLinkExt;
 
 #[derive(Default)]
 pub struct AudioState {
@@ -23,9 +26,9 @@ fn get_app_version() -> String {
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
-    // Get PostHog API key
     let posthog_api_key = option_env!("POSTHOG_API_KEY").unwrap_or("").to_string();
     let builder = tauri::Builder::default()
+        .plugin(tauri_plugin_deep_link::init())
         .plugin(
             tauri_plugin_autostart::Builder::new()
                 .app_name("AI-Overlay")
@@ -43,15 +46,12 @@ pub fn run() {
         .plugin(tauri_plugin_updater::Builder::new().build())
         .plugin(tauri_plugin_http::init())
         .plugin(tauri_plugin_keychain::init())
-        .plugin(tauri_plugin_shell::init()) // Add shell plugin
+        .plugin(tauri_plugin_shell::init())
         .plugin(posthog_init(PostHogConfig {
             api_key: posthog_api_key,
             options: Some(PostHogOptions {
-                // disable session recording
                 disable_session_recording: Some(true),
-                // disable pageview
                 capture_pageview: Some(false),
-                // disable pageleave
                 capture_pageleave: Some(false),
                 ..Default::default()
             }),
@@ -85,10 +85,31 @@ pub fn run() {
             speaker::get_audio_sample_rate,
         ])
         .setup(|app| {
-            // Setup main window positioning
             window::setup_main_window(app).expect("Failed to setup main window");
 
-            // Initialize global shortcut plugin with centralized handler
+            // Setup Deep Link handler
+            let handle = app.handle().clone();
+
+            // Registra o protocolo deep link no sistema (Linux e Windows debug)
+            #[cfg(any(target_os = "linux", all(debug_assertions, windows)))]
+            app.deep_link()
+                .register_all()
+                .expect("Failed to register deep link");
+
+            // Listener para deep links
+            app.deep_link().on_open_url(move |event| {
+                let urls = event.urls();
+                println!("🔗 Deep link recebido: {:?}", urls);
+
+                if let Some(url) = urls.first() {
+                    // Emite evento para o frontend
+                    if let Err(e) = handle.emit("deep-link-received", url) {
+                        eprintln!("Erro ao emitir evento deep-link: {}", e);
+                    }
+                }
+            });
+
+            // Initialize global shortcut plugin
             app.handle()
                 .plugin(
                     tauri_plugin_global_shortcut::Builder::new()
@@ -96,7 +117,6 @@ pub fn run() {
                             use tauri_plugin_global_shortcut::{Shortcut, ShortcutState};
 
                             if event.state() == ShortcutState::Pressed {
-                                // Get registered shortcuts and find matching action
                                 let state = app.state::<shortcuts::RegisteredShortcuts>();
                                 let registered = match state.shortcuts.lock() {
                                     Ok(guard) => guard,
@@ -106,7 +126,6 @@ pub fn run() {
                                     }
                                 };
 
-                                // Find which action this shortcut maps to
                                 for (action_id, shortcut_str) in registered.iter() {
                                     if let Ok(s) = shortcut_str.parse::<Shortcut>() {
                                         if &s == shortcut {
@@ -128,6 +147,7 @@ pub fn run() {
             if let Err(e) = shortcuts::setup_global_shortcuts(app.handle()) {
                 eprintln!("Failed to setup global shortcuts: {}", e);
             }
+
             Ok(())
         });
 

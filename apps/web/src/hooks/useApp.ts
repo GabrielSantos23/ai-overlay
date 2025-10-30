@@ -3,6 +3,7 @@ import { useEffect, useState } from "react";
 import { listen } from "@tauri-apps/api/event";
 import { getShortcutsConfig, initializeShortcutsIfNeeded } from "@/lib/storage";
 import { invoke } from "@tauri-apps/api/core";
+import { checkForAppUpdate } from "@/lib/updater";
 
 export const useApp = () => {
   // const systemAudio = useSystemAudio();
@@ -27,6 +28,11 @@ export const useApp = () => {
     };
 
     initializeShortcuts();
+  }, []);
+
+  // Check for application updates on startup
+  useEffect(() => {
+    checkForAppUpdate();
   }, []);
 
   // Migrate localStorage chat history to SQLite on app startup
@@ -83,7 +89,9 @@ export const useApp = () => {
       (event) => {
         const platform = navigator.platform.toLowerCase();
         if (typeof event.payload === "boolean" && platform.includes("win")) {
+          console.log("[toggle-window-visibility] payload:", event.payload, "isHidden before:", isHidden);
           setIsHidden(!event.payload);
+          setTimeout(() => { console.log("[toggle-window-visibility] isHidden after:", isHidden); }, 0);
           // find popover open and close it
           const popover = document.getElementById("popover-content");
           // set display to none, change data-state to closed

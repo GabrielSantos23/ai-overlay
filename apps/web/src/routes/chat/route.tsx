@@ -19,6 +19,8 @@ function ChatLayout() {
   const [isPopoverOpen, setIsPopoverOpen] = useState(false);
   const popoverContentRef = useRef<HTMLDivElement>(null);
 
+  console.log("[ChatLayout] isHidden:", isHidden);
+
   const calculatePopoverHeight = () => {
     if (popoverContentRef.current) {
       const rect = popoverContentRef.current.getBoundingClientRect();

@@ -4,6 +4,7 @@
  */
 
 import type { ChangeEvent, Dispatch, RefObject, SetStateAction } from "react";
+import type { Platform } from "./storage";
 
 // Base types from Convex schema
 export type MessageRole = "user" | "assistant";
@@ -301,3 +302,10 @@ export interface UseCompletionReturn {
   /** Whether a screenshot is currently loading */
   isScreenshotLoading: boolean;
 }
+
+export const getPlatform = (): Platform => {
+  // Replace this with actual platform detection logic
+  // e.g., if (navigator.userAgent.includes('Win')) return 'windows';
+  // or if (process.platform === 'darwin') return 'macos';
+  return "windows";
+};

@@ -13,6 +13,8 @@ const requiredEnvVars = [
   "DATABASE_URL",
   "BETTER_AUTH_SECRET",
   "GOOGLE_GENERATIVE_AI_API_KEY",
+  "GOOGLE_CLIENT_ID",
+  "GOOGLE_CLIENT_SECRET",
 ];
 
 const missingEnvVars = requiredEnvVars.filter((envVar) => !process.env[envVar]);
@@ -138,6 +140,85 @@ app.on(["POST", "GET"], "/api/auth/*", async (c) => {
   return response;
 });
 
+// Intermediate callback route for deep link back to the app
+app.get("/auth/callback", async (c) => {
+  const params = new URLSearchParams(c.req.query());
+  const deepLink = `ai-overlay://auth/callback?${params.toString()}`;
+
+  return c.html(`
+    <!DOCTYPE html>
+    <html>
+    <head>
+      <title>Autenticação</title>
+      <style>
+        body {
+          font-family: system-ui, -apple-system, sans-serif;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          min-height: 100vh;
+          margin: 0;
+          background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        }
+        .container {
+          text-align: center;
+          background: white;
+          padding: 3rem;
+          border-radius: 16px;
+          box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+          max-width: 400px;
+        }
+        h1 { color: #333; margin: 0 0 1rem; }
+        p { color: #666; margin: 0 0 2rem; }
+        button {
+          background: #667eea;
+          color: white;
+          border: none;
+          padding: 12px 24px;
+          border-radius: 8px;
+          font-size: 16px;
+          cursor: pointer;
+          transition: background 0.2s;
+        }
+        button:hover { background: #5568d3; }
+        .spinner {
+          border: 3px solid #f3f3f3;
+          border-top: 3px solid #667eea;
+          border-radius: 50%;
+          width: 40px;
+          height: 40px;
+          animation: spin 1s linear infinite;
+          margin: 0 auto 1rem;
+        }
+        @keyframes spin {
+          0% { transform: rotate(0deg); }
+          100% { transform: rotate(360deg); }
+        }
+      </style>
+    </head>
+    <body>
+      <div class="container">
+        <div class="spinner"></div>
+        <h1>✓ Autenticação bem-sucedida!</h1>
+        <p>Retornando para o aplicativo...</p>
+        <button onclick="openApp()">Abrir aplicativo</button>
+      </div>
+      
+      <script>
+        function openApp() {
+          const deepLink = "${deepLink}";
+          window.location.href = deepLink;
+          setTimeout(() => window.close(), 2000);
+        }
+        
+        // Tenta abrir automaticamente após 500ms
+        setTimeout(openApp, 500);
+      </script>
+    </body>
+    </html>
+  `);
+});
+
 app.use(
   "/trpc/*",
   trpcServer({
@@ -234,6 +315,8 @@ app.get("/health", (c) => {
       hasDatabaseUrl: !!process.env.DATABASE_URL,
       hasAuthSecret: !!process.env.BETTER_AUTH_SECRET,
       hasGoogleApiKey: !!process.env.GOOGLE_GENERATIVE_AI_API_KEY,
+      hasGoogleClientId: !!process.env.GOOGLE_CLIENT_ID,
+      hasGoogleClientSecret: !!process.env.GOOGLE_CLIENT_SECRET,
       hasTavilyApiKey: !!process.env.TAVILY_API_KEY,
       corsOrigin: process.env.CORS_ORIGIN || "not set",
       allowedOrigins: allowedOrigins,
@@ -257,4 +340,5 @@ if (process.env.NODE_ENV !== "production" && typeof Bun !== "undefined") {
     fetch: app.fetch,
     idleTimeout: 60, // Increase to 60 seconds for AI requests
   });
+  console.log(`🚀 Server running on http://localhost:${port}`);
 }

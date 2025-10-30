@@ -1,4 +1,5 @@
 import { authClient } from "@/lib/auth-client";
+import { onOpenUrl, getCurrent } from "@tauri-apps/plugin-deep-link";
 import { useForm } from "@tanstack/react-form";
 import { useNavigate } from "@tanstack/react-router";
 import { toast } from "sonner";
@@ -7,7 +8,7 @@ import Loader from "./loader";
 import { Button } from "./ui/button";
 import { Input } from "./ui/input";
 import { Label } from "./ui/label";
-
+import { open } from "@tauri-apps/plugin-shell";
 export default function SignInForm({
   onSwitchToSignUp,
 }: {
@@ -36,7 +37,7 @@ export default function SignInForm({
             });
             toast.success("Sign in successful");
           },
-          onError: (error) => {
+          onError: (error: any) => {
             toast.error(error.error.message || error.error.statusText);
           },
         },
@@ -126,6 +127,29 @@ export default function SignInForm({
       </form>
 
       <div className="mt-4 text-center">
+        <Button
+          variant="outline"
+          className="w-full mb-2"
+          onClick={async () => {
+            try {
+              const serverUrl = import.meta.env.VITE_SERVER_URL as string;
+              if (!serverUrl) {
+                toast.error("VITE_SERVER_URL is not set");
+                return;
+              }
+              const callbackUrl = `${serverUrl}/auth/callback`;
+              const googleUrl = `${serverUrl}/api/auth/sign-in/google?redirect_to=${encodeURIComponent(
+                callbackUrl,
+              )}`;
+              await open(googleUrl);
+            } catch (e) {
+              console.error(e);
+              toast.error("Failed to open browser for Google login");
+            }
+          }}
+        >
+          Continue with Google
+        </Button>
         <Button
           variant="link"
           onClick={onSwitchToSignUp}

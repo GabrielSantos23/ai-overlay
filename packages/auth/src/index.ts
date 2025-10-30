@@ -9,6 +9,20 @@ export const auth = betterAuth<BetterAuthOptions>({
 
     schema: schema,
   }),
+  baseURL: process.env.BASE_URL || "http://localhost:3000",
+  socialProviders: {
+    google: {
+      clientId: process.env.GOOGLE_CLIENT_ID!,
+      clientSecret: process.env.GOOGLE_CLIENT_SECRET!,
+      redirectURI: `${
+        process.env.BASE_URL || "http://localhost:3000"
+      }/auth/callback`,
+    },
+  },
+  session: {
+    expiresIn: 60 * 60 * 24 * 7,
+    updateAge: 60 * 60 * 24,
+  },
   trustedOrigins: [
     "http://localhost:3001",
     "http://tauri.localhost",

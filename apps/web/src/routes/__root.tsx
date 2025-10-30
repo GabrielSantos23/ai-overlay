@@ -14,6 +14,10 @@ import {
 import { TanStackRouterDevtools } from "@tanstack/react-router-devtools";
 import { useApp } from "@/hooks/useApp";
 import "../index.css";
+import { useEffect } from "react";
+import { listen } from "@tauri-apps/api/event";
+import { useNavigate } from "@tanstack/react-router";
+import { toast } from "sonner";
 
 export interface RouterAppContext {
   trpc: typeof trpc;
@@ -45,9 +49,33 @@ function RootComponent() {
   const isFetching = useRouterState({
     select: (s) => s.isLoading,
   });
+  const navigate = useNavigate();
 
   // Initialize app (including shortcuts)
   useApp();
+
+  // Listen for deep link callback after OAuth login
+  useEffect(() => {
+    let unlisten: (() => void) | undefined;
+    (async () => {
+      unlisten = await listen<string>("deep-link-received", async (event) => {
+        const url = event.payload;
+        try {
+          const parsed = new URL(url);
+          if (parsed.protocol === "ai-overlay:" && parsed.pathname === "/auth/callback") {
+            toast.success("Login successful");
+            // Navigate into the app; cookies should be set by the server's domain
+            navigate({ to: "/main" });
+          }
+        } catch {
+          // Ignore malformed URLs
+        }
+      });
+    })();
+    return () => {
+      if (unlisten) unlisten();
+    };
+  }, [navigate]);
 
   return (
     <>
@@ -59,7 +87,7 @@ function RootComponent() {
         storageKey="vite-ui-theme"
       >
         <div className="">{isFetching ? <Loader /> : <Outlet />}</div>
-        {/*<Toaster richColors />*/}
+        <Toaster position="top-right" />
       </ThemeProvider>
       {/*<TanStackRouterDevtools position="bottom-left" />
       <ReactQueryDevtools position="bottom" buttonPosition="bottom-right" />*/}

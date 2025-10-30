@@ -1,5 +1,6 @@
 export interface ShortcutAction {
   id: string;
+  icon: React.ComponentType<React.SVGProps<SVGSVGElement>>;
   name: string;
   description: string;
   defaultKey: {

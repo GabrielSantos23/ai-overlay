@@ -26,6 +26,9 @@ import { check } from "@tauri-apps/plugin-updater";
 import { relaunch } from "@tauri-apps/plugin-process";
 import { errorToast, InfoToast, successToast } from "@/lib/exportCustomToast";
 import { GeneralSettings } from "./GeneralSettings";
+import { KeybindsSettings } from "./KeybindsSettings";
+import { authClient } from "@/lib/auth-client";
+import { useNavigate } from "@tanstack/react-router";
 const menuItems = [
   { id: "general", title: "General", icon: Settings },
   { id: "calendar", title: "Calendar", icon: Calendar },
@@ -47,13 +50,6 @@ const CalendarSettings = () => (
   <div className="p-6">
     <h2 className="text-2xl font-bold text-white mb-2">Calendar Settings</h2>
     <p className="text-gray-400">Calendar settings will be configured here.</p>
-  </div>
-);
-
-const KeybindsSettings = () => (
-  <div className="p-6">
-    <h2 className="text-2xl font-bold text-white mb-2">Keybinds</h2>
-    <p className="text-gray-400">Keyboard shortcuts configuration.</p>
   </div>
 );
 
@@ -108,7 +104,7 @@ const BugReportSettings = () => (
 
 export const SettingsComponent = ({ open, onOpenChange }) => {
   const [activeSection, setActiveSection] = useState("general");
-
+  const navigate = useNavigate();
   const renderContent = () => {
     switch (activeSection) {
       case "general":
@@ -203,7 +199,20 @@ export const SettingsComponent = ({ open, onOpenChange }) => {
 
             {/* Bottom Actions */}
             <div className=" p-3 space-y-1">
-              <button className="w-full flex items-center gap-3 px-3 py-2 rounded-lg text-sm text-muted-foreground hover:bg-secondary hover:text-card-foreground transition-colors">
+              <button
+                onClick={() => {
+                  authClient.signOut({
+                    fetchOptions: {
+                      onSuccess: () => {
+                        navigate({
+                          to: "/main",
+                        });
+                      },
+                    },
+                  });
+                }}
+                className="w-full flex items-center gap-3 px-3 py-2 rounded-lg text-sm text-muted-foreground hover:bg-secondary hover:text-card-foreground transition-colors"
+              >
                 <LogOut className="w-4 h-4" />
                 <span>Sign out</span>
               </button>

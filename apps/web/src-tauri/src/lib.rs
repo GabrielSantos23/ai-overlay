@@ -26,6 +26,7 @@ pub fn run() {
     // Get PostHog API key
     let posthog_api_key = option_env!("POSTHOG_API_KEY").unwrap_or("").to_string();
     let builder = tauri::Builder::default()
+        .plugin(tauri_plugin_process::init())
         .manage(AudioState::default())
         .manage(CaptureState::default())
         .manage(shortcuts::WindowVisibility {

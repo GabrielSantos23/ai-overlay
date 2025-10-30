@@ -138,7 +138,7 @@ export const SettingsComponent = ({ open, onOpenChange }) => {
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="!w-[90vw]! max-w-[90vw]!   [&>button]:hidden  bg-card h-[80vh]! max-h-[80vh]! p-0  border border-muted ">
+      <DialogContent className="max-w-5xl!  w-screen!  [&>button]:hidden  bg-card h-[80vh]! max-h-[80vh]! p-0  border border-muted ">
         <div className="flex h-full">
           {/* Sidebar */}
           <div className="w-64    flex flex-col">

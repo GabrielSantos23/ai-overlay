@@ -1,15 +1,18 @@
+// components/settings/GeneralSettings.tsx
 import { useEffect, useState } from "react";
-import { check } from "@tauri-apps/plugin-updater";
-import { errorToast, InfoToast, successToast } from "@/lib/exportCustomToast";
-import { relaunch } from "@tauri-apps/plugin-process";
+import { getVersion } from "@tauri-apps/api/app";
+import { useUpdater } from "@/hooks/useUpdater";
 import {
   ArrowUp,
   ChevronDown,
+  Download,
   Eye,
+  Loader2,
   Monitor,
   Moon,
   Palette,
   Power,
+  RefreshCw,
   SunDim,
 } from "lucide-react";
 import { Switch } from "../ui/switch";
@@ -19,17 +22,26 @@ import {
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuLabel,
-  DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "../ui/dropdown-menu";
-import { getVersion } from "@tauri-apps/api/app";
+import { Progress } from "../ui/progress";
 
 export const GeneralSettings = () => {
   const [detectable, setDetectable] = useState(true);
   const [openOnLogin, setOpenOnLogin] = useState(true);
   const [advancedOpen, setAdvancedOpen] = useState(false);
-  const [updating, setUpdating] = useState(false);
   const [appVersion, setAppVersion] = useState<string>("");
+
+  const {
+    isChecking,
+    isDownloading,
+    isInstalling,
+    updateAvailable,
+    progress,
+    checkForUpdates,
+    downloadAndInstall,
+    cancelUpdate,
+  } = useUpdater();
 
   useEffect(() => {
     const fetchVersion = async () => {
@@ -45,55 +57,18 @@ export const GeneralSettings = () => {
     fetchVersion();
   }, []);
 
-  // ✅ define async function for checking update
-  const handleCheckForUpdate = async () => {
-    try {
-      setUpdating(true);
-      const update = await check();
+  const handleCheckUpdate = async () => {
+    await checkForUpdates();
+  };
 
-      if (!update) {
-        InfoToast("No updates available.");
-        return;
-      }
-
-      console.log(`Update ${update.version} found (${update.date})`);
-      InfoToast(`Update ${update.version} found (${update.date})`);
-      console.log(`Release notes: ${update.body}`);
-
-      let downloaded = 0;
-      let contentLength = 0;
-
-      await update.downloadAndInstall((event) => {
-        switch (event.event) {
-          case "Started":
-            contentLength = event.data.contentLength;
-            console.log(`Downloading ${contentLength} bytes`);
-            break;
-          case "Progress":
-            downloaded += event.data.chunkLength;
-            console.log(`Downloaded ${downloaded} of ${contentLength}`);
-            break;
-          case "Finished":
-            console.log("Download finished");
-            break;
-        }
-      });
-
-      console.log("Update installed successfully!");
-      successToast("Updated successfully!");
-      await relaunch(); // restart app
-    } catch (error) {
-      console.error("Update check failed:", error);
-      errorToast("Failed to check for updates.");
-    } finally {
-      setUpdating(false);
-    }
+  const handleDownloadUpdate = async () => {
+    await downloadAndInstall();
   };
 
   return (
-    <div className="flex-1 h-screen  overflow-y-auto bg-background border rounded-lg m-1">
+    <div className="flex-1 h-screen overflow-y-auto bg-background border rounded-lg m-1">
       {/* Detectable Section */}
-      <div className="p-6  ">
+      <div className="p-6">
         <div className="flex items-start justify-between bg-card rounded-lg p-3">
           <div className="flex items-start gap-3">
             <Eye className="w-5 h-5 text-muted-foreground mt-1" />
@@ -132,7 +107,7 @@ export const GeneralSettings = () => {
         <div className="flex items-start justify-between">
           <div className="flex items-start gap-3">
             <div className="bg-card p-2 rounded-lg">
-              <Power className="w-5 h-5 text-muted-foreground " />
+              <Power className="w-5 h-5 text-muted-foreground" />
             </div>
             <div className="flex-1">
               <h4 className="text-base font-medium text-card-foreground mb-1">
@@ -194,42 +169,115 @@ export const GeneralSettings = () => {
         </div>
 
         {/* Check for updates */}
-        <div className="flex items-start justify-between">
-          <div className="flex items-start gap-3">
-            <div className="bg-card p-2 rounded-lg">
-              <div className="w-6 h-6 bg-green-500 rounded-full flex items-center justify-center mt-0.5">
-                <div className="text-background font-bold">
-                  <ArrowUp className="w-4 h-4" />
+        <div className="flex flex-col gap-3">
+          <div className="flex items-start justify-between">
+            <div className="flex items-start gap-3">
+              <div className="bg-card p-2 rounded-lg">
+                <div className="w-6 h-6 bg-green-500 rounded-full flex items-center justify-center mt-0.5">
+                  <div className="text-background font-bold">
+                    <ArrowUp className="w-4 h-4" />
+                  </div>
                 </div>
               </div>
+              <div className="flex-1">
+                <h4 className="text-base font-medium text-card-foreground mb-1">
+                  Check for updates
+                </h4>
+                <p className="text-sm text-muted-foreground">
+                  Make sure you're running the latest version of Cluely.
+                </p>
+              </div>
             </div>
-            <div className="flex-1">
-              <h4 className="text-base font-medium text-card-foreground mb-1">
-                Check for updates
-              </h4>
-              <p className="text-sm text-muted-foreground">
-                Make sure you’re running the latest version of Cluely.
+
+            {/* Botão Check/Download baseado no estado */}
+            {!updateAvailable ? (
+              <Button
+                variant="outline"
+                className="ml-4 bg-secondary border text-card-foreground hover:bg-secondary/70"
+                onClick={handleCheckUpdate}
+                disabled={isChecking}
+              >
+                {isChecking ? (
+                  <>
+                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                    Checking...
+                  </>
+                ) : (
+                  <>
+                    <RefreshCw className="w-4 h-4 mr-2" />
+                    Check for updates
+                  </>
+                )}
+              </Button>
+            ) : (
+              <div className="flex gap-2">
+                <Button
+                  variant="outline"
+                  className="bg-secondary border text-card-foreground hover:bg-secondary/70"
+                  onClick={cancelUpdate}
+                  disabled={isDownloading || isInstalling}
+                >
+                  Cancel
+                </Button>
+                <Button
+                  className="bg-green-600 hover:bg-green-700 text-white"
+                  onClick={handleDownloadUpdate}
+                  disabled={isDownloading || isInstalling}
+                >
+                  {isDownloading ? (
+                    <>
+                      <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                      Downloading...
+                    </>
+                  ) : isInstalling ? (
+                    <>
+                      <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                      Installing...
+                    </>
+                  ) : (
+                    <>
+                      <Download className="w-4 h-4 mr-2" />
+                      Download v{updateAvailable.version}
+                    </>
+                  )}
+                </Button>
+              </div>
+            )}
+          </div>
+
+          {/* Barra de progresso */}
+          {progress && (
+            <div className="ml-14 space-y-2">
+              <Progress value={progress.percentage} className="h-2" />
+              <p className="text-xs text-muted-foreground">
+                {progress.percentage}% (
+                {(progress.downloaded / 1024 / 1024).toFixed(2)} MB of{" "}
+                {(progress.total / 1024 / 1024).toFixed(2)} MB)
               </p>
             </div>
-          </div>
-          <Button
-            variant="outline"
-            className="ml-4 bg-secondary border text-card-foreground hover:bg-secondary/70"
-            onClick={handleCheckForUpdate}
-            disabled={updating}
-          >
-            {updating ? "Checking..." : "Check for updates"}
-          </Button>
+          )}
+
+          {/* Informações da atualização */}
+          {updateAvailable && (
+            <div className="ml-14 p-3 bg-secondary/50 rounded-lg border border-green-500/20">
+              <h5 className="text-sm font-semibold text-card-foreground mb-1">
+                New version available: v{updateAvailable.version}
+              </h5>
+              <p className="text-xs text-muted-foreground">
+                {updateAvailable.body || "No release notes available."}
+              </p>
+            </div>
+          )}
         </div>
       </div>
 
       {/* Advanced Section */}
-      <div className=" px-4 ">
+      <div className="px-4">
         <button
           onClick={() => setAdvancedOpen(!advancedOpen)}
-          className="w-full flex items-center rounded-lg justify-between p-6 hover:bg-secondary/50 transition-colors "
+          className="w-full flex items-center rounded-lg justify-between p-6 hover:bg-secondary/50 transition-colors"
         >
-          <div className="">
+          <div>
             <h3 className="text-base font-semibold text-card-foreground text-left mb-1">
               Advanced
             </h3>
@@ -249,7 +297,8 @@ export const GeneralSettings = () => {
           </div>
         )}
       </div>
-      <div className="px-6 text-end justify-end py-3 text-xs text-muted-foreground/50 ">
+
+      <div className="px-6 text-end justify-end py-3 text-xs text-muted-foreground/50">
         About v{appVersion || "..."}
       </div>
     </div>

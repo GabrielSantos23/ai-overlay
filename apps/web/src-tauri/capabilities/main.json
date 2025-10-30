@@ -11,6 +11,14 @@
     "core:window:allow-start-dragging",
     "core:window:default",
     "http:allow-fetch",
-    "updater:allow-check"
+
+    "updater:default",
+    "updater:allow-check",
+    "updater:allow-download",
+    "updater:allow-install",
+    "updater:allow-download-and-install",
+
+    "process:default",
+    "process:allow-restart"
   ]
 }

@@ -40,7 +40,7 @@ export default function SignInForm({
           onError: (error: any) => {
             toast.error(error.error.message || error.error.statusText);
           },
-        },
+        }
       );
     },
     validators: {
@@ -139,7 +139,7 @@ export default function SignInForm({
               }
               const callbackUrl = `${serverUrl}/auth/callback`;
               const googleUrl = `${serverUrl}/api/auth/sign-in/google?redirect_to=${encodeURIComponent(
-                callbackUrl,
+                callbackUrl
               )}`;
               await open(googleUrl);
             } catch (e) {

@@ -1,4 +1,3 @@
-import React from "react";
 import ReactDOM from "react-dom/client";
 import { createBrowserRouter, RouterProvider } from "react-router-dom";
 import { App } from "./routes/App";
@@ -20,8 +19,17 @@ const router = createBrowserRouter([
   },
 ]);
 
-ReactDOM.createRoot(document.getElementById("root")!).render(
-  <React.StrictMode>
-    <RouterProvider router={router} fallbackElement={<div>Loading...</div>} />
-  </React.StrictMode>
-);
+const rootElement = document.getElementById("root");
+
+if (!rootElement) {
+  throw new Error("Root element not found");
+}
+
+if (!rootElement.innerHTML) {
+  const root = ReactDOM.createRoot(rootElement);
+  const RP = RouterProvider as unknown as React.ComponentType<{
+    router: typeof router;
+    fallbackElement?: React.ReactNode;
+  }>;
+  root.render(<RP router={router} fallbackElement={<div>Loading...</div>} />);
+}

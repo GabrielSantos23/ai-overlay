@@ -147,47 +147,37 @@ export default function SignInForm({
                       provider: "google",
                       callbackURL,
                     }),
-                    redirect: "manual", // Don't follow redirect, get the response
+                    credentials: "include", // Include cookies for session
                   }
                 );
 
-                // If we get a redirect, extract the location header
-                if (response.status >= 300 && response.status < 400) {
-                  const location = response.headers.get("location");
-                  if (location) {
-                    console.log("🚀 Opening Google OAuth:", location);
-                    await open(location);
-                    toast.info("Aguardando autenticação no navegador...");
-                    return;
-                  }
+                if (!response.ok) {
+                  const errorData = await response
+                    .json()
+                    .catch(() => ({ error: { message: "Unknown error" } }));
+                  toast.error(
+                    errorData.error?.message || "Failed to initiate Google login"
+                  );
+                  return;
                 }
 
-                // If successful, user is already authenticated
-                if (response.ok) {
-                  const data = await response.json();
-                  if (data.user) {
-                    toast.success("Sign in successful");
-                    navigate({ to: "/main" });
-                    return;
-                  }
+                const data = await response.json();
+
+                // The server should return { url: "..." } with the OAuth URL
+                if (data.url) {
+                  console.log("🚀 Opening Google OAuth:", data.url);
+                  await open(data.url);
+                  toast.info("Aguardando autenticação no navegador...");
+                  return;
                 }
 
-                // If we get here, something went wrong
-                const errorData = await response
-                  .json()
-                  .catch(() => ({ error: { message: "Unknown error" } }));
-                toast.error(
-                  errorData.error?.message || "Failed to initiate Google login"
-                );
+                // Fallback: if no URL, something went wrong
+                toast.error("Failed to get OAuth URL from server");
               } catch (fetchError: any) {
-                // If fetch fails, try constructing the URL directly
-                // Better Auth will redirect to Google OAuth
-                const oauthUrl = `${serverUrl}/api/auth/sign-in/social?provider=google&callbackURL=${encodeURIComponent(
-                  callbackURL
-                )}`;
-                console.log("🚀 Opening Google OAuth (fallback):", oauthUrl);
-                await open(oauthUrl);
-                toast.info("Aguardando autenticação no navegador...");
+                console.error("Error initiating Google login:", fetchError);
+                toast.error(
+                  fetchError?.message || "Failed to initiate Google login"
+                );
               }
             } catch (e: any) {
               console.error(e);

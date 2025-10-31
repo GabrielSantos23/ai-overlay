@@ -126,7 +126,66 @@ app.use(
   })
 );
 
-// Better Auth handles all auth routes including /api/auth/callback/google
+// Custom handler for social sign-in with disableRedirect for Tauri apps
+app.post("/api/auth/sign-in/social", async (c) => {
+  try {
+    const body = await c.req.json();
+    const { provider, callbackURL, errorCallbackURL, newUserCallbackURL } = body;
+
+    if (!provider) {
+      return c.json({ error: { message: "Provider is required" } }, 400);
+    }
+
+    console.log(
+      `[AUTH] Social sign-in request for provider: ${provider} from origin: ${c.req.header("origin")}`
+    );
+
+    // Use Better Auth's server API with disableRedirect to get the OAuth URL
+    const result = await auth.api.signInSocial({
+      body: {
+        provider,
+        callbackURL: callbackURL || "/main",
+        errorCallbackURL: errorCallbackURL || "/login",
+        newUserCallbackURL: newUserCallbackURL || "/main",
+        disableRedirect: true,
+      },
+    });
+
+    if (result.error) {
+      console.error(`[AUTH] Error initiating social sign-in:`, result.error);
+      return c.json(
+        { error: { message: result.error.message || "Failed to initiate social sign-in" } },
+        result.error.statusCode || 500
+      );
+    }
+
+    // Return the OAuth URL
+    if (result.data?.url) {
+      console.log(`[AUTH] Returning OAuth URL for provider: ${provider}`);
+      return c.json({ url: result.data.url });
+    }
+
+    // Fallback: if no URL, something went wrong
+    console.error(`[AUTH] No OAuth URL returned for provider: ${provider}`);
+    return c.json(
+      { error: { message: "Failed to get OAuth URL" } },
+      500
+    );
+  } catch (error) {
+    console.error("[AUTH] Error in social sign-in handler:", error);
+    return c.json(
+      {
+        error: {
+          message:
+            error instanceof Error ? error.message : "Internal server error",
+        },
+      },
+      500
+    );
+  }
+});
+
+// Better Auth handles all other auth routes including /api/auth/callback/google
 // The custom callback handler was removed to let Better Auth process OAuth callbacks properly
 app.on(["POST", "GET"], "/api/auth/*", async (c) => {
   console.log(

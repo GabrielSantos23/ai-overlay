@@ -9,14 +9,16 @@ export const auth = betterAuth<BetterAuthOptions>({
 
     schema: schema,
   }),
-  baseURL: process.env.BASE_URL || "http://localhost:3000",
+
+  baseURL: process.env.BASE_URL || "https://server.bangg.xyz",
   socialProviders: {
     google: {
       clientId: process.env.GOOGLE_CLIENT_ID!,
       clientSecret: process.env.GOOGLE_CLIENT_SECRET!,
-      redirectURI: `${
-        process.env.BASE_URL || "http://localhost:3000"
-      }/auth/callback`,
+      redirectURI:
+        process.env.NODE_ENV === "production"
+          ? "https://server.bangg.xyz/api/auth/callback/google"
+          : "http://localhost:3000/api/auth/callback/google",
     },
   },
   session: {

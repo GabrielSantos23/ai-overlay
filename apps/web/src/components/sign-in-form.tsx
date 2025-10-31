@@ -1,5 +1,4 @@
 import { authClient } from "@/lib/auth-client";
-import { onOpenUrl, getCurrent } from "@tauri-apps/plugin-deep-link";
 import { useForm } from "@tanstack/react-form";
 import { useNavigate } from "@tanstack/react-router";
 import { toast } from "sonner";
@@ -132,19 +131,71 @@ export default function SignInForm({
           className="w-full mb-2"
           onClick={async () => {
             try {
-              const serverUrl = import.meta.env.VITE_SERVER_URL as string;
-              if (!serverUrl) {
-                toast.error("VITE_SERVER_URL is not set");
-                return;
+              const serverUrl =
+                import.meta.env.VITE_SERVER_URL || "http://localhost:3000";
+              const callbackURL = `${serverUrl}/auth/callback`;
+
+              try {
+                const response = await fetch(
+                  `${serverUrl}/api/auth/sign-in/social`,
+                  {
+                    method: "POST",
+                    headers: {
+                      "Content-Type": "application/json",
+                    },
+                    body: JSON.stringify({
+                      provider: "google",
+                      callbackURL,
+                    }),
+                    redirect: "manual", // Don't follow redirect, get the response
+                  }
+                );
+
+                // If we get a redirect, extract the location header
+                if (response.status >= 300 && response.status < 400) {
+                  const location = response.headers.get("location");
+                  if (location) {
+                    console.log("🚀 Opening Google OAuth:", location);
+                    await open(location);
+                    toast.info("Aguardando autenticação no navegador...");
+                    return;
+                  }
+                }
+
+                // If successful, user is already authenticated
+                if (response.ok) {
+                  const data = await response.json();
+                  if (data.user) {
+                    toast.success("Sign in successful");
+                    navigate({ to: "/main" });
+                    return;
+                  }
+                }
+
+                // If we get here, something went wrong
+                const errorData = await response
+                  .json()
+                  .catch(() => ({ error: { message: "Unknown error" } }));
+                toast.error(
+                  errorData.error?.message || "Failed to initiate Google login"
+                );
+              } catch (fetchError: any) {
+                // If fetch fails, try constructing the URL directly
+                // Better Auth will redirect to Google OAuth
+                const oauthUrl = `${serverUrl}/api/auth/sign-in/social?provider=google&callbackURL=${encodeURIComponent(
+                  callbackURL
+                )}`;
+                console.log("🚀 Opening Google OAuth (fallback):", oauthUrl);
+                await open(oauthUrl);
+                toast.info("Aguardando autenticação no navegador...");
               }
-              const callbackUrl = `${serverUrl}/auth/callback`;
-              const googleUrl = `${serverUrl}/api/auth/sign-in/google?redirect_to=${encodeURIComponent(
-                callbackUrl
-              )}`;
-              await open(googleUrl);
-            } catch (e) {
+            } catch (e: any) {
               console.error(e);
-              toast.error("Failed to open browser for Google login");
+              toast.error(
+                e?.error?.message ||
+                  e?.message ||
+                  "Failed to initiate Google login"
+              );
             }
           }}
         >

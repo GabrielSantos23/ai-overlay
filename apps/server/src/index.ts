@@ -126,6 +126,8 @@ app.use(
   })
 );
 
+// Better Auth handles all auth routes including /api/auth/callback/google
+// The custom callback handler was removed to let Better Auth process OAuth callbacks properly
 app.on(["POST", "GET"], "/api/auth/*", async (c) => {
   console.log(
     `[AUTH] Handling auth request from origin: ${c.req.header("origin")}`
@@ -203,14 +205,14 @@ app.get("/auth/callback", async (c) => {
         <p>Retornando para o aplicativo...</p>
         <button onclick="openApp()">Abrir aplicativo</button>
       </div>
-      
+
       <script>
         function openApp() {
           const deepLink = "${deepLink}";
           window.location.href = deepLink;
           setTimeout(() => window.close(), 2000);
         }
-        
+
         // Tenta abrir automaticamente após 500ms
         setTimeout(openApp, 500);
       </script>

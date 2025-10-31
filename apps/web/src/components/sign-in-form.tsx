@@ -42,7 +42,7 @@ export default function SignInForm({
           onError: (error: any) => {
             toast.error(error.error.message || error.error.statusText);
           },
-        },
+        }
       );
     },
     validators: {

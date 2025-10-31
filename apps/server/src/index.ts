@@ -89,7 +89,7 @@ app.use(
     allowHeaders: tauriAuthHeaders,
     credentials: true,
     exposeHeaders: ["X-Conversation-Id", "X-Model-Used"],
-  }),
+  })
 );
 
 // Apply CORS specifically to auth routes with Tauri support
@@ -119,7 +119,7 @@ app.use(
         origin.startsWith("tauri://")
       ) {
         console.log(
-          `[CORS-AUTH] Origin ${origin} matches localhost/tauri pattern`,
+          `[CORS-AUTH] Origin ${origin} matches localhost/tauri pattern`
         );
         return origin;
       }
@@ -137,7 +137,7 @@ app.use(
     allowHeaders: tauriAuthHeaders, // Include platform header
     credentials: true,
     exposeHeaders: ["X-Conversation-Id", "X-Model-Used"],
-  }),
+  })
 );
 
 // Custom handler for social sign-in with disableRedirect for Tauri apps
@@ -158,39 +158,27 @@ app.post("/api/auth/sign-in/social", async (c) => {
     console.log(`[AUTH] Is Tauri request:`, isTauriRequest);
     console.log(
       `[AUTH] Social sign-in request for provider: ${provider} from origin: ${c.req.header(
-        "origin",
-      )}`,
+        "origin"
+      )}`
     );
 
-    // Use Better Auth's server API with disableRedirect to get the OAuth URL
-    const result = await auth.api.signInSocial({
-      body: {
-        provider,
-        callbackURL: callbackURL || "/main",
-        errorCallbackURL: errorCallbackURL || "/login",
-        newUserCallbackURL: newUserCallbackURL || "/main",
-        disableRedirect: true,
-      },
-    });
+    // IMPORTANT for external-browser flows (Tauri):
+    // Opening Google's URL directly in the system browser will miss the
+    // state cookie set by the server, causing `state_mismatch`.
+    // Instead, return the server-side initiator URL so the external browser
+    // hits our server first (sets state cookie), then redirects to Google.
+    const baseUrl = process.env.BASE_URL || "https://server.bangg.xyz";
+    const url = new URL(`${baseUrl}/api/auth/sign-in/${provider}`);
+    if (callbackURL) url.searchParams.set("callbackURL", callbackURL);
+    if (errorCallbackURL)
+      url.searchParams.set("errorCallbackURL", errorCallbackURL);
+    if (newUserCallbackURL)
+      url.searchParams.set("newUserCallbackURL", newUserCallbackURL);
 
-    // Check if result has url property (OAuth URL for redirect)
-    if (result.url) {
-      console.log(`[AUTH] Returning OAuth URL for provider: ${provider}`);
-      return c.json({ url: result.url });
-    }
+    console.log(`[AUTH] Returning initiator URL for provider: ${provider}`);
+    return c.json({ url: url.toString() });
 
-    // Check if user is already authenticated (has user property)
-    if ("user" in result && result.user) {
-      console.log(`[AUTH] User already authenticated: ${result.user.id}`);
-      return c.json({
-        user: result.user,
-        message: "User is already authenticated",
-      });
-    }
-
-    // Fallback: if no URL and no user, something went wrong
-    console.error(`[AUTH] No OAuth URL returned for provider: ${provider}`);
-    return c.json({ error: { message: "Failed to get OAuth URL" } }, 500);
+    // (We no longer call the server API directly here to avoid cross-context cookie issues.)
   } catch (error) {
     console.error("[AUTH] Error in social sign-in handler:", error);
     return c.json(
@@ -200,7 +188,7 @@ app.post("/api/auth/sign-in/social", async (c) => {
             error instanceof Error ? error.message : "Internal server error",
         },
       },
-      500,
+      500
     );
   }
 });
@@ -209,7 +197,7 @@ app.post("/api/auth/sign-in/social", async (c) => {
 // The custom callback handler was removed to let Better Auth process OAuth callbacks properly
 app.on(["POST", "GET"], "/api/auth/*", async (c) => {
   console.log(
-    `[AUTH] Handling auth request from origin: ${c.req.header("origin")}`,
+    `[AUTH] Handling auth request from origin: ${c.req.header("origin")}`
   );
   const response = await auth.handler(c.req.raw);
   console.log(`[AUTH] Response status: ${response.status}`);
@@ -307,7 +295,7 @@ app.use(
     createContext: async (_opts, honoCtx) => {
       return await createContext({ context: honoCtx });
     },
-  }),
+  })
 );
 
 app.post("/ai", async (c) => {
@@ -319,10 +307,10 @@ app.post("/ai", async (c) => {
         {
           error: "Server configuration error",
           details: `Missing environment variables: ${missingEnvVars.join(
-            ", ",
+            ", "
           )}`,
         },
-        500,
+        500
       );
     }
 
@@ -356,13 +344,13 @@ app.post("/ai", async (c) => {
         console.log(
           `[AI] Stored assistant response in conversation ${conversationId} (${
             Date.now() - startTime
-          }ms total)`,
+          }ms total)`
         );
       },
     });
 
     console.log(
-      `[AI] Returning stream response (${Date.now() - startTime}ms to start)`,
+      `[AI] Returning stream response (${Date.now() - startTime}ms to start)`
     );
 
     // Return stream with conversation ID in headers
@@ -378,7 +366,7 @@ app.post("/ai", async (c) => {
         error: "AI request failed",
         details: error instanceof Error ? error.message : "Unknown error",
       },
-      500,
+      500
     );
   }
 });

@@ -12,6 +12,16 @@
     "core:window:default",
     "http:allow-fetch",
     "os:default",
+    {
+      "identifier": "opener:allow-open-url",
+      "allow": [
+        { "url": "https://**" },
+        { "url": "http://**" }
+      ]
+    },
+    "http:default",
+    "deep-link:default",
+    "core:default",
     "updater:default",
     "updater:allow-check",
     "updater:allow-download",

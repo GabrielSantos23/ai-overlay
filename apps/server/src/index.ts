@@ -130,14 +130,17 @@ app.use(
 app.post("/api/auth/sign-in/social", async (c) => {
   try {
     const body = await c.req.json();
-    const { provider, callbackURL, errorCallbackURL, newUserCallbackURL } = body;
+    const { provider, callbackURL, errorCallbackURL, newUserCallbackURL } =
+      body;
 
     if (!provider) {
       return c.json({ error: { message: "Provider is required" } }, 400);
     }
 
     console.log(
-      `[AUTH] Social sign-in request for provider: ${provider} from origin: ${c.req.header("origin")}`
+      `[AUTH] Social sign-in request for provider: ${provider} from origin: ${c.req.header(
+        "origin"
+      )}`
     );
 
     // Use Better Auth's server API with disableRedirect to get the OAuth URL
@@ -151,26 +154,24 @@ app.post("/api/auth/sign-in/social", async (c) => {
       },
     });
 
-    if (result.error) {
-      console.error(`[AUTH] Error initiating social sign-in:`, result.error);
-      return c.json(
-        { error: { message: result.error.message || "Failed to initiate social sign-in" } },
-        result.error.statusCode || 500
-      );
-    }
-
-    // Return the OAuth URL
-    if (result.data?.url) {
+    // Check if result has url property (OAuth URL for redirect)
+    if (result.url) {
       console.log(`[AUTH] Returning OAuth URL for provider: ${provider}`);
-      return c.json({ url: result.data.url });
+      return c.json({ url: result.url });
     }
 
-    // Fallback: if no URL, something went wrong
+    // Check if user is already authenticated (has user property)
+    if ("user" in result && result.user) {
+      console.log(`[AUTH] User already authenticated: ${result.user.id}`);
+      return c.json({
+        user: result.user,
+        message: "User is already authenticated",
+      });
+    }
+
+    // Fallback: if no URL and no user, something went wrong
     console.error(`[AUTH] No OAuth URL returned for provider: ${provider}`);
-    return c.json(
-      { error: { message: "Failed to get OAuth URL" } },
-      500
-    );
+    return c.json({ error: { message: "Failed to get OAuth URL" } }, 500);
   } catch (error) {
     console.error("[AUTH] Error in social sign-in handler:", error);
     return c.json(

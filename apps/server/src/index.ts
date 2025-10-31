@@ -31,10 +31,20 @@ const allowedOrigins = [
   "http://localhost:3001",
   "http://tauri.localhost",
   "https://tauri.localhost",
+  "tauri://localhost",
   "http://localhost:1420", // Tauri dev server default port
   ...(process.env.CORS_ORIGIN && process.env.CORS_ORIGIN !== "*"
     ? [process.env.CORS_ORIGIN]
     : []),
+];
+
+// Headers that better-auth-tauri needs
+const tauriAuthHeaders = [
+  "Content-Type",
+  "Authorization",
+  "Cookie",
+  "platform", // Required by better-auth-tauri
+  "x-better-auth-tauri", // Additional header that might be used
 ];
 
 app.use(
@@ -59,9 +69,10 @@ app.use(
       // Fallback for development - allow any localhost
       if (
         origin.startsWith("http://localhost:") ||
-        origin.startsWith("http://127.0.0.1:")
+        origin.startsWith("http://127.0.0.1:") ||
+        origin.startsWith("tauri://") // Allow tauri:// protocol
       ) {
-        console.log(`[CORS] Origin ${origin} matches localhost pattern`);
+        console.log(`[CORS] Origin ${origin} matches localhost/tauri pattern`);
         return origin;
       }
 
@@ -75,13 +86,13 @@ app.use(
       return null;
     },
     allowMethods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
-    allowHeaders: ["Content-Type", "Authorization", "Cookie"],
+    allowHeaders: tauriAuthHeaders,
     credentials: true,
     exposeHeaders: ["X-Conversation-Id", "X-Model-Used"],
-  })
+  }),
 );
 
-// Apply CORS specifically to auth routes
+// Apply CORS specifically to auth routes with Tauri support
 app.use(
   "/api/auth/*",
   cors({
@@ -101,12 +112,15 @@ app.use(
         return origin;
       }
 
-      // Fallback for development - allow any localhost
+      // Fallback for development - allow any localhost and tauri
       if (
         origin.startsWith("http://localhost:") ||
-        origin.startsWith("http://127.0.0.1:")
+        origin.startsWith("http://127.0.0.1:") ||
+        origin.startsWith("tauri://")
       ) {
-        console.log(`[CORS-AUTH] Origin ${origin} matches localhost pattern`);
+        console.log(
+          `[CORS-AUTH] Origin ${origin} matches localhost/tauri pattern`,
+        );
         return origin;
       }
 
@@ -120,10 +134,10 @@ app.use(
       return null;
     },
     allowMethods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
-    allowHeaders: ["Content-Type", "Authorization", "Cookie"],
+    allowHeaders: tauriAuthHeaders, // Include platform header
     credentials: true,
     exposeHeaders: ["X-Conversation-Id", "X-Model-Used"],
-  })
+  }),
 );
 
 // Custom handler for social sign-in with disableRedirect for Tauri apps
@@ -137,10 +151,15 @@ app.post("/api/auth/sign-in/social", async (c) => {
       return c.json({ error: { message: "Provider is required" } }, 400);
     }
 
+    // Log Tauri-specific headers for debugging
+    const platform = c.req.header("platform");
+    const isTauriRequest = c.req.header("x-better-auth-tauri");
+    console.log(`[AUTH] Platform header:`, platform);
+    console.log(`[AUTH] Is Tauri request:`, isTauriRequest);
     console.log(
       `[AUTH] Social sign-in request for provider: ${provider} from origin: ${c.req.header(
-        "origin"
-      )}`
+        "origin",
+      )}`,
     );
 
     // Use Better Auth's server API with disableRedirect to get the OAuth URL
@@ -181,7 +200,7 @@ app.post("/api/auth/sign-in/social", async (c) => {
             error instanceof Error ? error.message : "Internal server error",
         },
       },
-      500
+      500,
     );
   }
 });
@@ -190,7 +209,7 @@ app.post("/api/auth/sign-in/social", async (c) => {
 // The custom callback handler was removed to let Better Auth process OAuth callbacks properly
 app.on(["POST", "GET"], "/api/auth/*", async (c) => {
   console.log(
-    `[AUTH] Handling auth request from origin: ${c.req.header("origin")}`
+    `[AUTH] Handling auth request from origin: ${c.req.header("origin")}`,
   );
   const response = await auth.handler(c.req.raw);
   console.log(`[AUTH] Response status: ${response.status}`);
@@ -288,7 +307,7 @@ app.use(
     createContext: async (_opts, honoCtx) => {
       return await createContext({ context: honoCtx });
     },
-  })
+  }),
 );
 
 app.post("/ai", async (c) => {
@@ -300,10 +319,10 @@ app.post("/ai", async (c) => {
         {
           error: "Server configuration error",
           details: `Missing environment variables: ${missingEnvVars.join(
-            ", "
+            ", ",
           )}`,
         },
-        500
+        500,
       );
     }
 
@@ -337,13 +356,13 @@ app.post("/ai", async (c) => {
         console.log(
           `[AI] Stored assistant response in conversation ${conversationId} (${
             Date.now() - startTime
-          }ms total)`
+          }ms total)`,
         );
       },
     });
 
     console.log(
-      `[AI] Returning stream response (${Date.now() - startTime}ms to start)`
+      `[AI] Returning stream response (${Date.now() - startTime}ms to start)`,
     );
 
     // Return stream with conversation ID in headers
@@ -359,7 +378,7 @@ app.post("/ai", async (c) => {
         error: "AI request failed",
         details: error instanceof Error ? error.message : "Unknown error",
       },
-      500
+      500,
     );
   }
 });

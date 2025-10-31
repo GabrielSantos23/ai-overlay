@@ -8,6 +8,9 @@ import { Button } from "./ui/button";
 import { Input } from "./ui/input";
 import { Label } from "./ui/label";
 import { open } from "@tauri-apps/plugin-shell";
+
+import { signInSocial } from "@daveyplate/better-auth-tauri";
+
 export default function SignInForm({
   onSwitchToSignUp,
 }: {
@@ -39,7 +42,7 @@ export default function SignInForm({
           onError: (error: any) => {
             toast.error(error.error.message || error.error.statusText);
           },
-        }
+        },
       );
     },
     validators: {
@@ -53,6 +56,23 @@ export default function SignInForm({
   if (isPending) {
     return <Loader />;
   }
+
+  const handleGoogleLogin = async () => {
+    try {
+      await signInSocial({
+        authClient,
+        provider: "google",
+      });
+      // O plugin Better Auth Tauri cuida de tudo:
+      // 1. Abre o navegador com a URL OAuth
+      // 2. Aguarda o callback via deep link
+      // 3. Processa a autenticação
+      // 4. Chama onSuccess do setupBetterAuthTauri
+    } catch (error) {
+      console.error("Erro no login:", error);
+      toast.error("Falha ao iniciar login com Google");
+    }
+  };
 
   return (
     <div className="mx-auto w-full mt-10 max-w-md p-6">
@@ -129,64 +149,11 @@ export default function SignInForm({
         <Button
           variant="outline"
           className="w-full mb-2"
-          onClick={async () => {
-            try {
-              const serverUrl =
-                import.meta.env.VITE_SERVER_URL || "http://localhost:3000";
-              const callbackURL = `${serverUrl}/auth/callback`;
-
-              try {
-                const response = await fetch(
-                  `${serverUrl}/api/auth/sign-in/social`,
-                  {
-                    method: "POST",
-                    headers: {
-                      "Content-Type": "application/json",
-                    },
-                    body: JSON.stringify({
-                      provider: "google",
-                      callbackURL,
-                    }),
-                    credentials: "include", // Include cookies for session
-                  }
-                );
-
-                if (!response.ok) {
-                  const errorData = await response
-                    .json()
-                    .catch(() => ({ error: { message: "Unknown error" } }));
-                  toast.error(
-                    errorData.error?.message || "Failed to initiate Google login"
-                  );
-                  return;
-                }
-
-                const data = await response.json();
-
-                // The server should return { url: "..." } with the OAuth URL
-                if (data.url) {
-                  console.log("🚀 Opening Google OAuth:", data.url);
-                  await open(data.url);
-                  toast.info("Aguardando autenticação no navegador...");
-                  return;
-                }
-
-                // Fallback: if no URL, something went wrong
-                toast.error("Failed to get OAuth URL from server");
-              } catch (fetchError: any) {
-                console.error("Error initiating Google login:", fetchError);
-                toast.error(
-                  fetchError?.message || "Failed to initiate Google login"
-                );
-              }
-            } catch (e: any) {
-              console.error(e);
-              toast.error(
-                e?.error?.message ||
-                  e?.message ||
-                  "Failed to initiate Google login"
-              );
-            }
+          onClick={() => {
+            signInSocial({
+              authClient,
+              provider: "google",
+            });
           }}
         >
           Continue with Google

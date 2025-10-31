@@ -36,6 +36,7 @@
     "db:migrate": "turbo -F @tauri-ai-overlay/db db:migrate"
   },
   "dependencies": {
+    "@daveyplate/better-auth-tauri": "^0.1.6",
     "@tanstack/react-router": "^1.133.36",
     "@tanstack/react-router-devtools": "^1.133.36",
     "dotenv": "^17.2.3",

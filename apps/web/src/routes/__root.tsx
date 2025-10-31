@@ -18,7 +18,7 @@ import { useEffect } from "react";
 import { listen } from "@tauri-apps/api/event";
 import { useNavigate } from "@tanstack/react-router";
 import { toast } from "sonner";
-
+import { useDeepLinkAuth } from "@/hooks/useDeepLinkAuth";
 export interface RouterAppContext {
   trpc: typeof trpc;
   queryClient: QueryClient;
@@ -53,6 +53,7 @@ function RootComponent() {
 
   // Initialize app (including shortcuts)
   useApp();
+  useDeepLinkAuth();
 
   // Listen for deep link callback after OAuth login
   useEffect(() => {
@@ -62,7 +63,10 @@ function RootComponent() {
         const url = event.payload;
         try {
           const parsed = new URL(url);
-          if (parsed.protocol === "ai-overlay:" && parsed.pathname === "/auth/callback") {
+          if (
+            parsed.protocol === "ai-overlay:" &&
+            parsed.pathname === "/auth/callback"
+          ) {
             toast.success("Login successful");
             // Navigate into the app; cookies should be set by the server's domain
             navigate({ to: "/main" });

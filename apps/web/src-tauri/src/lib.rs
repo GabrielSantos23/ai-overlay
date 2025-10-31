@@ -29,6 +29,7 @@ pub fn run() {
     let posthog_api_key = option_env!("POSTHOG_API_KEY").unwrap_or("").to_string();
     let builder = tauri::Builder::default()
         .plugin(tauri_plugin_deep_link::init())
+        .plugin(tauri_plugin_os::init())
         .plugin(
             tauri_plugin_autostart::Builder::new()
                 .app_name("AI-Overlay")

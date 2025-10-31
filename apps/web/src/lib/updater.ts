@@ -43,3 +43,4 @@ export async function checkForAppUpdate(): Promise<void> {
   }
 }
 
+

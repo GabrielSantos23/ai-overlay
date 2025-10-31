@@ -1,6 +1,12 @@
-import { useEffect, useState } from "react";
+import { createFileRoute } from "@tanstack/react-router";
+import { useEffect } from "react";
+import { useState } from "react";
 
-export default function AuthCallback() {
+export const Route = createFileRoute("/AuthCallback")({
+  component: RouteComponent,
+});
+
+function RouteComponent() {
   const [status, setStatus] = useState<"loading" | "success" | "error">(
     "loading",
   );
@@ -21,7 +27,9 @@ export default function AuthCallback() {
         console.log("✅ Received authorization code");
 
         // Cria o deep link para o app Tauri
-        const deepLink = `ai-overlay://auth/callback?code=${encodeURIComponent(code)}&state=${encodeURIComponent(state || "")}`;
+        const deepLink = `ai-overlay://auth/callback?code=${encodeURIComponent(
+          code,
+        )}&state=${encodeURIComponent(state || "")}`;
 
         console.log("🔗 Opening deep link:", deepLink);
 
@@ -45,7 +53,6 @@ export default function AuthCallback() {
   }, []);
 
   const openApp = () => {
-    const params = new URLSearchParams(window.location.search);
     const deepLink = `ai-overlay://auth/callback${window.location.search}`;
     window.location.href = deepLink;
   };

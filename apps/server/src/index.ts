@@ -162,23 +162,35 @@ app.post("/api/auth/sign-in/social", async (c) => {
       )}`
     );
 
-    // IMPORTANT for external-browser flows (Tauri):
-    // Opening Google's URL directly in the system browser will miss the
-    // state cookie set by the server, causing `state_mismatch`.
-    // Instead, return the server-side initiator URL so the external browser
-    // hits our server first (sets state cookie), then redirects to Google.
-    const baseUrl = process.env.BASE_URL || "https://server.bangg.xyz";
-    const url = new URL(`${baseUrl}/api/auth/sign-in/${provider}`);
-    if (callbackURL) url.searchParams.set("callbackURL", callbackURL);
-    if (errorCallbackURL)
-      url.searchParams.set("errorCallbackURL", errorCallbackURL);
-    if (newUserCallbackURL)
-      url.searchParams.set("newUserCallbackURL", newUserCallbackURL);
+    // Use Better Auth's server API with disableRedirect to get the OAuth URL
+    const result = await auth.api.signInSocial({
+      body: {
+        provider,
+        callbackURL: callbackURL || "/main",
+        errorCallbackURL: errorCallbackURL || "/login",
+        newUserCallbackURL: newUserCallbackURL || "/main",
+        disableRedirect: true,
+      },
+    });
 
-    console.log(`[AUTH] Returning initiator URL for provider: ${provider}`);
-    return c.json({ url: url.toString() });
+    // Check if result has url property (OAuth URL for redirect)
+    if (result.url) {
+      console.log(`[AUTH] Returning OAuth URL for provider: ${provider}`);
+      return c.json({ url: result.url });
+    }
 
-    // (We no longer call the server API directly here to avoid cross-context cookie issues.)
+    // Check if user is already authenticated (has user property)
+    if ("user" in result && result.user) {
+      console.log(`[AUTH] User already authenticated: ${result.user.id}`);
+      return c.json({
+        user: result.user,
+        message: "User is already authenticated",
+      });
+    }
+
+    // Fallback: if no URL and no user, something went wrong
+    console.error(`[AUTH] No OAuth URL returned for provider: ${provider}`);
+    return c.json({ error: { message: "Failed to get OAuth URL" } }, 500);
   } catch (error) {
     console.error("[AUTH] Error in social sign-in handler:", error);
     return c.json(

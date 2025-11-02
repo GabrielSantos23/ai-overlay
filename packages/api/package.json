@@ -3,11 +3,11 @@
   "exports": {
     ".": {
       "types": "./dist/index.d.ts",
-      "default": "./src/index.ts"
+      "default": "./dist/index.js"
     },
     "./*": {
       "types": "./dist/*.d.ts",
-      "default": "./src/*.ts"
+      "default": "./dist/*.js"
     }
   },
   "type": "module",
@@ -21,14 +21,17 @@
     "typescript": "^5"
   },
   "dependencies": {
-    "@trpc/server": "catalog:",
-    "@trpc/client": "catalog:",
-    "next": "catalog:",
-    "drizzle-orm": "catalog:",
-    "ai": "catalog:",
     "@ai-sdk/google": "catalog:",
+    "@hono/trpc-server": "^0.4.0",
+    "@taur-next-0auth/auth": "workspace:*",
+    "@taur-next-0auth/db": "workspace:*",
+    "@trpc/client": "catalog:",
+    "@trpc/server": "catalog:",
+    "ai": "catalog:",
     "dotenv": "catalog:",
-    "zod": "catalog:",
-    "@taur-next-0auth/db": "workspace:*"
+    "drizzle-orm": "catalog:",
+    "hono": "catalog:",
+    "nanoid": "catalog:",
+    "zod": "catalog:"
   }
 }

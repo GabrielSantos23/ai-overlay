@@ -1,0 +1,86 @@
+{
+  "$schema": "../node_modules/@tauri-apps/cli/schema.json",
+  "productName": "taur-next-0auth",
+  "version": "0.1.0",
+  "identifier": "com.taur-next-0auth.app",
+  "build": {
+    "beforeDevCommand": "bun dev",
+    "beforeBuildCommand": "bun build",
+    "frontendDist": "../.next",
+    "devUrl": "http://localhost:3001"
+  },
+  "app": {
+    "windows": [
+      {
+        "label": "ai-overlay",
+        "title": "AI Overlay",
+        "width": 500,
+        "height": 150,
+        "decorations": false,
+        "transparent": true,
+        "alwaysOnTop": true,
+        "resizable": false,
+        "visibleOnAllWorkspaces": true,
+        "skipTaskbar": true,
+        "visible": false,
+        "center": false,
+        "contentProtected": true,
+        "focus": false,
+        "acceptFirstMouse": true,
+        "shadow": false,
+        "url": "/ai"
+      },
+      {
+        "label": "main-window",
+        "title": "Main Window",
+        "width": 1200,
+        "height": 800,
+        "minHeight": 800,
+        "minWidth": 1000,
+        "resizable": true,
+        "visible": true,
+        "center": true,
+        "url": "/main",
+        "decorations": false,
+        "devtools": true
+      }
+    ],
+    "security": {
+      "csp": null
+    },
+    "withGlobalTauri": true
+  },
+  "bundle": {
+    "active": true,
+    "targets": "all",
+    "icon": [],
+    "windows": {
+      "certificateThumbprint": null,
+      "digestAlgorithm": "sha256",
+      "timestampUrl": ""
+    },
+    "macOS": {
+      "frameworks": [],
+      "minimumSystemVersion": "10.13",
+      "exceptionDomain": ""
+    }
+  },
+  "plugins": {
+    "updater": {
+      "active": true,
+      "endpoints": [
+        "https://updater.bangg.xyz/{{target}}/{{arch}}/{{current_version}}"
+      ],
+      "dialog": true,
+      "pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IENCMkMzQjJGRUQ4REE2RjAKUldUd3BvM3RMenNzeTJIWHNFSDdqcWVyT3FmejhVY3l4YTYwekxjT0VYeWdvTEFlT09LUEZrbnQK"
+    },
+    "shell": {
+      "open": true
+    },
+    "deep-link": {
+      "desktop": {
+        "schemes": ["myapp"]
+      }
+    }
+  }
+}

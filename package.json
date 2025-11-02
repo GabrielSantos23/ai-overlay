@@ -16,11 +16,14 @@
       "@ai-sdk/google": "^2.0.13",
       "drizzle-orm": "^0.44.2",
       "dotenv": "^17.2.2",
-      "tsdown": "^0.15.5"
+      "tsdown": "^0.15.5",
+      "hono": "^4.0.0",
+      "nanoid": "^5.0.0"
     }
   },
   "scripts": {
     "dev": "turbo dev",
+    "dev:full": "tauri dev",
     "build": "turbo build",
     "check-types": "turbo check-types",
     "dev:native": "turbo -F native dev",
@@ -32,6 +35,11 @@
   },
   "dependencies": {
     "dotenv": "^17.2.2",
+    "drizzle-zod": "^0.8.3",
+    "env-ts": "^1.0.4",
+    "next-auth": "^4.24.13",
+    "react": "^19.2.0",
+    "superjson": "^2.2.5",
     "zod": "^4.1.11"
   },
   "devDependencies": {

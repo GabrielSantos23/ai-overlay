@@ -1,0 +1,35 @@
+{
+  "$schema": "../gen/schemas/desktop-schema.json",
+  "identifier": "cross-platform",
+  "description": "Capability for the main window on Windows and Linux",
+  "windows": ["main", "main-window"],
+  "platforms": ["windows", "linux"],
+  "permissions": [
+    "core:default",
+    "opener:default",
+    "updater:default",
+    "keychain:default",
+    "keychain:allow-get-item",
+    "keychain:allow-save-item",
+    "keychain:allow-remove-item",
+    "global-shortcut:allow-is-registered",
+    "global-shortcut:allow-register",
+    "global-shortcut:allow-unregister",
+    "shell:allow-open",
+    "core:window:allow-start-dragging",
+    "posthog:default",
+    "posthog:allow-capture",
+    {
+      "identifier": "http:default",
+      "allow": [
+        {
+          "url": "http://**"
+        },
+        {
+          "url": "https://**"
+        }
+      ]
+    },
+    "autostart:default"
+  ]
+}

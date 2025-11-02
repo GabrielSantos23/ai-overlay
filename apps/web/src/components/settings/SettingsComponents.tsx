@@ -101,7 +101,15 @@ const BugReportSettings = () => (
   </div>
 );
 
-export const SettingsComponent = ({ open, onOpenChange }) => {
+interface SettingsComponentProps {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+}
+
+export const SettingsComponent = ({
+  open,
+  onOpenChange,
+}: SettingsComponentProps) => {
   const [activeSection, setActiveSection] = useState("general");
   const { user, isLoading, isAuthenticated, login, logout } = useAuth();
 

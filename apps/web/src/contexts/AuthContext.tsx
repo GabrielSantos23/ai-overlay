@@ -97,11 +97,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
         // Optionally fetch full user from database
         try {
-          const dbUser = await fetchUserFromDatabase(receivedToken);
-          console.log("[Auth] Database user loaded:", dbUser);
           setUser({
             ...session.user,
-            ...dbUser, // Merge database fields with session
           });
         } catch (dbError) {
           console.warn(

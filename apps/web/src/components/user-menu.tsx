@@ -1,7 +1,7 @@
 "use client";
 
-import { useSession, useSignOut } from "@/hooks/useAuth";
-import { Button } from "@/components/ui/button";
+import { useSession } from "next-auth/react";
+import { signOut } from "next-auth/react";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -16,16 +16,13 @@ import {
  * Uses the tRPC auth router
  */
 export function UserMenu() {
-  const { user, isAuthenticated, isLoading } = useSession();
-  const { signOut, isLoading: isSigningOut } = useSignOut();
+  const { data: session, status } = useSession();
 
-  if (isLoading) {
-    return (
-      <div className="w-8 h-8 rounded-full bg-gray-200 animate-pulse" />
-    );
+  if (status === "loading") {
+    return <div className="w-8 h-8 rounded-full bg-gray-200 animate-pulse" />;
   }
 
-  if (!isAuthenticated || !user) {
+  if (status !== "authenticated" || !session?.user) {
     return null;
   }
 
@@ -33,41 +30,42 @@ export function UserMenu() {
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
         <button className="flex items-center gap-2 focus:outline-none">
-          {user.image ? (
+          {session?.user.image ? (
             <img
-              src={user.image}
-              alt={user.name || "User"}
+              src={session?.user.image}
+              alt={session?.user.name || "User"}
               className="w-8 h-8 rounded-full"
             />
           ) : (
             <div className="w-8 h-8 rounded-full bg-gray-300 flex items-center justify-center">
               <span className="text-sm font-medium">
-                {user.name?.[0]?.toUpperCase() || user.email?.[0]?.toUpperCase() || "U"}
+                {session?.user.name?.[0]?.toUpperCase() ||
+                  session?.user.email?.[0]?.toUpperCase() ||
+                  "U"}
               </span>
             </div>
           )}
           <span className="hidden md:block text-sm font-medium">
-            {user.name || user.email}
+            {session?.user.name || session?.user.email}
           </span>
         </button>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end" className="w-56">
         <DropdownMenuLabel>
           <div className="flex flex-col space-y-1">
-            <p className="text-sm font-medium leading-none">{user.name}</p>
-            {user.email && (
+            <p className="text-sm font-medium leading-none">
+              {session?.user.name}
+            </p>
+            {session?.user.email && (
               <p className="text-xs leading-none text-muted-foreground">
-                {user.email}
+                {session?.user.email}
               </p>
             )}
           </div>
         </DropdownMenuLabel>
         <DropdownMenuSeparator />
-        <DropdownMenuItem onClick={() => signOut()} disabled={isSigningOut}>
-          {isSigningOut ? "Saindo..." : "Sair"}
-        </DropdownMenuItem>
+        <DropdownMenuItem onClick={() => signOut()}>Saindo...</DropdownMenuItem>
       </DropdownMenuContent>
     </DropdownMenu>
   );
 }
-

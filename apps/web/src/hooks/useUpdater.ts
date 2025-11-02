@@ -92,12 +92,12 @@ export const useUpdater = () => {
       console.log("⬇️ Iniciando download da atualização...");
 
       let downloaded = 0;
-      let contentLength = 0;
+      let contentLength: number = 0;
 
       await state.updateAvailable.downloadAndInstall((event) => {
         switch (event.event) {
           case "Started":
-            contentLength = event.data.contentLength;
+            contentLength = event.data.contentLength ?? 0;
             console.log(`📦 Baixando ${contentLength} bytes`);
             setState((prev) => ({
               ...prev,
@@ -114,7 +114,7 @@ export const useUpdater = () => {
             const percentage = Math.round((downloaded / contentLength) * 100);
 
             console.log(
-              `📊 Progresso: ${percentage}% (${downloaded}/${contentLength})`,
+              `📊 Progresso: ${percentage}% (${downloaded}/${contentLength})`
             );
 
             setState((prev) => ({

@@ -97,7 +97,7 @@ async function getStore(): Promise<Store> {
     if (!isTauri()) {
       throw new Error("Store is only available in Tauri environment");
     }
-    store = new Store(".oauth-tokens.dat");
+    store = await Store.load(".oauth-tokens.dat"); // ✅ Correct - use load() method
   }
   return store;
 }
@@ -190,20 +190,20 @@ export async function initiateOAuthFlow(
     try {
       // Generate auth URL
       const authUrl = generateAuthUrl(provider);
-      
+
       // Listen for OAuth callback from deep-link plugin
       if (!isTauri()) {
         reject(new Error("OAuth flow is only available in Tauri app"));
         return;
       }
-      
+
       const unlisten = await listen<string>("oauth-callback", (event) => {
         const url = event.payload;
         if (url && url.startsWith("myapp://callback")) {
           unlisten();
-          
+
           const { code, error } = parseCallbackUrl(url);
-          
+
           if (error) {
             reject(new Error(`OAuth error: ${error}`));
           } else if (code) {
@@ -243,4 +243,3 @@ export async function completeOAuthFlow(
 
   return tokenResponse;
 }
-

@@ -6,8 +6,7 @@ import { generateSummary } from "../ai-utils";
 
 export const conversationsRouter = router({
   getConversations: protectedProcedure.query(async ({ ctx }) => {
-    const userId = ctx.session.user.id;
-
+    const userId = ctx.session?.user?.name as string;
     const conversationsList = await db
       .select({
         id: conversation.id,
@@ -29,7 +28,13 @@ export const conversationsRouter = router({
       })
     )
     .query(async ({ input, ctx }) => {
-      const userId = ctx.session.user.id;
+      if (!ctx.session?.user?.name) {
+        throw new Error("User not authenticated");
+      }
+      const userId = ctx.session?.user?.name as string;
+      if (!userId) {
+        throw new Error("User not authenticated");
+      }
 
       const existingConversation = await db
         .select({ id: conversation.id })
@@ -62,7 +67,10 @@ export const conversationsRouter = router({
       })
     )
     .mutation(async ({ input, ctx }) => {
-      const userId = ctx.session.user.id;
+      const userId = ctx.session?.user?.name as string;
+      if (!userId) {
+        throw new Error("User not authenticated");
+      }
 
       const existingConversation = await db
         .select({ id: conversation.id })
@@ -113,7 +121,10 @@ export const conversationsRouter = router({
       })
     )
     .mutation(async ({ input, ctx }) => {
-      const userId = ctx.session.user.id;
+      const userId = ctx.session?.user?.name as string;
+      if (!userId) {
+        throw new Error("User not authenticated");
+      }
 
       // Verify the conversation belongs to the user
       const existingConversation = await db
@@ -147,7 +158,7 @@ export const conversationsRouter = router({
       })
     )
     .mutation(async ({ input, ctx }) => {
-      const userId = ctx.session.user.id;
+      const userId = ctx.session?.user?.name as string;
 
       // Verify the conversation belongs to the user
       const existingConversation = await db
@@ -185,7 +196,10 @@ export const conversationsRouter = router({
       })
     )
     .mutation(async ({ input, ctx }) => {
-      const userId = ctx.session.user.id;
+      const userId = ctx.session?.user?.name as string;
+      if (!userId) {
+        throw new Error("User not authenticated");
+      }
 
       // Verify the conversation belongs to the user
       const existingConversation = await db
@@ -223,7 +237,10 @@ export const conversationsRouter = router({
       })
     )
     .query(async ({ input, ctx }) => {
-      const userId = ctx.session.user.id;
+      const userId = ctx.session?.user?.name as string;
+      if (!userId) {
+        throw new Error("User not authenticated");
+      }
 
       // Verify the conversation belongs to the user
       const existingConversation = await db

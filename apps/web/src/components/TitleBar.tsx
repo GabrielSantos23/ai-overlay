@@ -5,13 +5,17 @@ import {
   MaximizeIcon,
   MinimizeIcon,
 } from "@hugeicons/core-free-icons";
-import { getCurrentWindow } from "@tauri-apps/api/window";
+import {
+  getCurrentWindow,
+  type Window as TauriWindow,
+} from "@tauri-apps/api/window";
 import { HugeiconsIcon } from "@hugeicons/react";
 import { ArrowLeft, LoaderPinwheel, Minus, Search, Square } from "lucide-react";
 import { usePathname, useRouter } from "next/navigation";
 import { Button } from "./ui/button";
 import { Kbd, KbdGroup } from "./ui/kbd";
 import { ProfileDropdown } from "./ProfileDropdown";
+import { useEffect, useState } from "react";
 
 interface TitleBarProps {
   children: React.ReactNode;
@@ -19,14 +23,28 @@ interface TitleBarProps {
 }
 
 function TitleBar({ children, onSearchClick }: TitleBarProps) {
-  const appWindow = getCurrentWindow();
-  const router = useRouter(); // Changed
-  const pathname = usePathname(); // Changed
+  const router = useRouter();
+  const pathname = usePathname();
+  const [appWindow, setAppWindow] = useState<TauriWindow | null>(null);
 
-  const isHome = location.pathname === "/main";
-  const minimize = () => appWindow.minimize();
-  const toggleMaximize = () => appWindow.toggleMaximize();
-  const close = () => appWindow.close();
+  // Only get window in client-side (Tauri)
+  useEffect(() => {
+    if (typeof window !== "undefined" && window.__TAURI__) {
+      (async () => {
+        try {
+          const tauriWindow = await getCurrentWindow();
+          setAppWindow(tauriWindow);
+        } catch (error) {
+          console.error("Error getting current window:", error);
+        }
+      })();
+    }
+  }, []);
+
+  const isHome = pathname === "/main";
+  const minimize = () => (appWindow as any)?.minimize();
+  const toggleMaximize = () => (appWindow as any)?.toggleMaximize();
+  const close = () => appWindow?.close();
 
   return (
     <div className="flex flex-col h-min-screen w-full min-h-0 bg-[#121214] ">

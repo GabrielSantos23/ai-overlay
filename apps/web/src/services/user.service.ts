@@ -1,6 +1,5 @@
 // src/services/user.service.ts
-import { eq, and } from "drizzle-orm";
-import { db } from "../../../../packages/db/src";
+import { db, eq, and } from "../../../../packages/db/src";
 import {
   users,
   type NewUser,

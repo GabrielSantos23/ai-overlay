@@ -57,8 +57,8 @@ export default function LoginPage() {
       <div className="flex items-end justify-center w-full pb-4">
         <p>
           By signing in, you agree to our{" "}
-          <Link href="/terms">Terms of Service</Link> and{" "}
-          <Link href="/privacy">Privacy Policy</Link>
+          <Link href={"/terms" as any}>Terms of Service</Link> and{" "}
+          <Link href={"/privacy" as any}>Privacy Policy</Link>
         </p>
       </div>
     </div>

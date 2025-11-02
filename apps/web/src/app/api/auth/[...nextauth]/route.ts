@@ -130,7 +130,7 @@ export const authOptions: NextAuthOptions = {
     strategy: "jwt",
   },
   secret: process.env.NEXTAUTH_SECRET || process.env.AUTH_SECRET,
-  trustHost: true,
+  // trustHost: true,
   useSecureCookies: process.env.NODE_ENV === "production",
   debug: process.env.NODE_ENV === "development",
 };

@@ -42,6 +42,8 @@ interface SessionData {
   createdAt: number;
   callbackReceived?: boolean;
   callbackReceivedAt?: number;
+  sessionToken?: string;
+  allCookies?: string;
 }
 
 const sessions = new Map<string, SessionData>();
@@ -139,6 +141,13 @@ app.get("/auth/callback", async (req: Request, res: Response) => {
     if (session) {
       session.callbackReceived = true;
       session.callbackReceivedAt = Date.now();
+      // Store cookies and session token for later validation
+      if (cookies) {
+        session.allCookies = cookies;
+      }
+      if (sessionToken) {
+        session.sessionToken = sessionToken;
+      }
     }
 
     const nextAuthUrl = process.env.NEXTAUTH_URL;
@@ -250,9 +259,27 @@ app.get("/auth/callback", async (req: Request, res: Response) => {
     }
 
     // Build the deep link URL
-    const token = sessionToken || (sessionId as string);
+    // Only use sessionToken if we have it; otherwise, we need to fetch it from NextAuth
+    // If we have session data, we successfully authenticated, so use sessionId as reference
+    // The client will use sessionId to retrieve the actual cookies/token from the session map
+    const token =
+      sessionToken || (sessionData?.user ? (sessionId as string) : null);
     const email = sessionData?.user?.email || "";
     const name = sessionData?.user?.name || "";
+
+    if (!token) {
+      return res.status(500).send(`
+        <!DOCTYPE html>
+        <html>
+          <head><title>Authentication Error</title></head>
+          <body>
+            <h2>Authentication Error</h2>
+            <p>Failed to retrieve authentication token. Please try logging in again.</p>
+            <p><small>Session ID: ${sessionId || "None"}</small></p>
+          </body>
+        </html>
+      `);
+    }
 
     const deepLinkUrl = `${callbackUrl}?token=${encodeURIComponent(
       token
@@ -394,6 +421,22 @@ app.post("/api/session", async (req: Request, res: Response) => {
       });
     }
 
+    // If token looks like a sessionId (short, alphanumeric), try to get stored cookies
+    let cookiesToUse = `next-auth.session-token=${token}`;
+
+    // Check if token is actually a sessionId (stored in our sessions map)
+    // SessionIds are typically 11-13 characters, while NextAuth tokens are much longer
+    if (token.length < 20 && sessions.has(token)) {
+      const session = sessions.get(token);
+      if (session?.allCookies) {
+        console.log("Using stored cookies from session map");
+        cookiesToUse = session.allCookies;
+      } else if (session?.sessionToken) {
+        console.log("Using stored session token from session map");
+        cookiesToUse = `next-auth.session-token=${session.sessionToken}`;
+      }
+    }
+
     const targetUrl = `${nextAuthUrl}/api/auth/session`;
     console.log("Fetching session from:", targetUrl);
 
@@ -402,7 +445,7 @@ app.post("/api/session", async (req: Request, res: Response) => {
         method: "GET",
         headers: {
           "Content-Type": "application/json",
-          Cookie: `next-auth.session-token=${token}`,
+          Cookie: cookiesToUse,
           "User-Agent": "oauth-proxy/1.0",
         },
       });

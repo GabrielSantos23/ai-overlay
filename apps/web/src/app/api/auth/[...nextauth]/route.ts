@@ -130,30 +130,29 @@ export const authOptions: NextAuthOptions = {
     strategy: "jwt",
   },
   secret: process.env.NEXTAUTH_SECRET || process.env.AUTH_SECRET,
-  // trustHost: true,
   useSecureCookies: process.env.NODE_ENV === "production",
   debug: process.env.NODE_ENV === "development",
 };
 
 const handler = NextAuth(authOptions);
 
-async function corsHandler(
-  req: Request,
-  context: { params: Promise<{ nextauth: string[] }> }
-) {
-  const response = await handler(req, context);
+// Add CORS headers to allow proxy server to fetch session
+function addCorsHeaders(response: Response, origin?: string | null): Response {
+  const newResponse = new Response(response.body, {
+    status: response.status,
+    statusText: response.statusText,
+    headers: response.headers,
+  });
 
-  const origin = req.headers.get("origin");
-  if (
-    origin &&
-    (origin.includes("localhost:3000") || origin.includes("localhost:1420"))
-  ) {
-    const newResponse = new Response(response.body, {
-      status: response.status,
-      statusText: response.statusText,
-      headers: response.headers,
-    });
+  // List of allowed origins (your proxy servers)
+  const allowedOrigins = [
+    "https://proxy.bangg.xyz",
+    "http://localhost:3000",
+    "http://localhost:3001",
+  ];
 
+  // Check if origin is allowed
+  if (origin && allowedOrigins.some((allowed) => origin.includes(allowed))) {
     newResponse.headers.set("Access-Control-Allow-Origin", origin);
     newResponse.headers.set("Access-Control-Allow-Credentials", "true");
     newResponse.headers.set(
@@ -162,24 +161,67 @@ async function corsHandler(
     );
     newResponse.headers.set(
       "Access-Control-Allow-Headers",
-      "Content-Type, Authorization"
+      "Content-Type, Authorization, Cookie"
     );
-
-    return newResponse;
+  } else if (origin?.includes("localhost") || origin?.includes("127.0.0.1")) {
+    // Always allow localhost for development
+    newResponse.headers.set("Access-Control-Allow-Origin", origin);
+    newResponse.headers.set("Access-Control-Allow-Credentials", "true");
+    newResponse.headers.set(
+      "Access-Control-Allow-Methods",
+      "GET, POST, OPTIONS"
+    );
+    newResponse.headers.set(
+      "Access-Control-Allow-Headers",
+      "Content-Type, Authorization, Cookie"
+    );
   }
 
-  return response;
+  return newResponse;
+}
+
+async function corsHandler(
+  req: Request,
+  context: { params: Promise<{ nextauth: string[] }> }
+) {
+  const origin = req.headers.get("origin");
+
+  // Handle preflight
+  if (req.method === "OPTIONS") {
+    return addCorsHeaders(new Response(null, { status: 204 }), origin);
+  }
+
+  const response = await handler(req, context);
+  return addCorsHeaders(response, origin);
 }
 
 export async function OPTIONS(req: Request) {
+  const origin = req.headers.get("origin");
+
+  const allowedOrigins = [
+    "https://proxy.bangg.xyz",
+    "http://localhost:3000",
+    "http://localhost:3001",
+  ];
+
+  const headers: Record<string, string> = {
+    "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
+    "Access-Control-Allow-Headers": "Content-Type, Authorization, Cookie",
+  };
+
+  if (
+    origin &&
+    (allowedOrigins.some((allowed) => origin.includes(allowed)) ||
+      origin.includes("localhost") ||
+      origin.includes("127.0.0.1"))
+  ) {
+    headers["Access-Control-Allow-Origin"] = origin;
+    headers["Access-Control-Allow-Credentials"] = "true";
+  }
+
   return new Response(null, {
     status: 204,
-    headers: {
-      "Access-Control-Allow-Origin": req.headers.get("origin") || "*",
-      "Access-Control-Allow-Credentials": "true",
-      "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
-      "Access-Control-Allow-Headers": "Content-Type, Authorization",
-    },
+    headers,
   });
 }
 

@@ -16,8 +16,8 @@ function getProxyUrl(): string {
     "__TAURI_INTERNALS__" in window;
 
   if (isTauri) {
-    // In Tauri, use production proxy URL
-    return process.env.NEXT_PUBLIC_PROXY_URL || "https://proxy.bangg.xyz";
+    // In Tauri, use production proxy URL (your Vercel URL)
+    return process.env.NEXT_PUBLIC_PROXY_URL || "http://localhost:3000";
   }
 
   // In browser/Next.js, use localhost or env var
@@ -77,7 +77,6 @@ export async function loginWithOAuth(provider: string): Promise<string> {
     console.log(`[OAuth] Session ID: ${sessionId}`);
 
     // Step 2: Open browser
-    // Validate and clean the URL before opening
     let urlToOpen = authUrl.trim();
     if (!urlToOpen.startsWith("http://") && !urlToOpen.startsWith("https://")) {
       console.error(`[OAuth] Invalid URL format: ${urlToOpen}`);
@@ -89,18 +88,17 @@ export async function loginWithOAuth(provider: string): Promise<string> {
       await open(urlToOpen);
     } catch (openError) {
       console.error(`[OAuth] Failed to open URL:`, openError);
-      // Fallback: try to open without validation
       const urlObj = new URL(urlToOpen);
       const cleanUrl = urlObj.toString();
       console.log(`[OAuth] Retrying with cleaned URL: ${cleanUrl}`);
       await open(cleanUrl);
     }
 
-    // Step 3: Wait for callback
+    // Step 3: Wait for callback using both deep links and polling
     console.log(`[OAuth] Waiting for callback...`);
     const token = await waitForAuthCallback(sessionId);
 
-    console.log(`[OAuth] Token received: ${token}`);
+    console.log(`[OAuth] Token received`);
 
     try {
       await invoke("show_overlay_window");
@@ -123,6 +121,7 @@ function waitForAuthCallback(sessionId: string): Promise<string> {
     );
 
     let deepLinkUnlisten: (() => void) | null = null;
+    let pollingInterval: NodeJS.Timeout | null = null;
     let resolved = false;
 
     const cleanup = () => {
@@ -131,6 +130,18 @@ function waitForAuthCallback(sessionId: string): Promise<string> {
         deepLinkUnlisten();
         deepLinkUnlisten = null;
       }
+      if (pollingInterval) {
+        clearInterval(pollingInterval);
+        pollingInterval = null;
+      }
+    };
+
+    const resolveWithToken = (token: string) => {
+      if (resolved) return;
+      resolved = true;
+      clearTimeout(timeout);
+      cleanup();
+      resolve(token);
     };
 
     const timeout = setTimeout(() => {
@@ -141,75 +152,45 @@ function waitForAuthCallback(sessionId: string): Promise<string> {
       }
     }, 5 * 60 * 1000);
 
-    // Listen for deep link events
+    // Strategy 1: Listen for deep link events
     try {
       console.log(`[OAuth] Registering deep link listener...`);
       deepLinkUnlisten = await listen<string | string[]>(
         "deep-link-received",
         (event) => {
-          if (resolved) {
-            console.log(`[OAuth] Already resolved, ignoring event`);
-            return;
-          }
+          if (resolved) return;
 
           console.log(`[OAuth] Deep link event received:`, event);
-          console.log(`[OAuth] Event payload type:`, typeof event.payload);
-          console.log(`[OAuth] Event payload:`, event.payload);
 
           try {
-            // Handle both string and array payloads
             const urls = Array.isArray(event.payload)
               ? event.payload
               : [event.payload];
-
-            console.log(`[OAuth] Processing ${urls.length} URL(s)`);
 
             for (const urlStr of urls) {
               const urlString = String(urlStr);
               console.log(`[OAuth] Processing URL: ${urlString}`);
 
-              // Parse myapp:// URL
               if (urlString.startsWith("myapp://callback")) {
-                console.log(`[OAuth] Matched myapp://callback URL`);
-
                 const parts = urlString.split("?");
                 if (parts.length > 1) {
                   const params = new URLSearchParams(parts[1]);
                   const token = params.get("token");
                   const receivedSessionId = params.get("sessionId");
-                  const email = params.get("email");
-                  const name = params.get("name");
 
                   console.log(`[OAuth] Extracted parameters:`, {
-                    token: token ? `${token.substring(0, 10)}...` : null,
-                    receivedSessionId,
-                    expectedSessionId: sessionId,
-                    email,
-                    name,
+                    hasToken: !!token,
+                    sessionMatch: receivedSessionId === sessionId,
                   });
 
                   if (token && receivedSessionId === sessionId) {
                     console.log(
                       `[OAuth] ✓ Token received successfully via deep link`
                     );
-                    resolved = true;
-                    clearTimeout(timeout);
-                    cleanup();
-                    resolve(token);
+                    resolveWithToken(token);
                     return;
-                  } else {
-                    console.warn(`[OAuth] Session ID mismatch or no token`, {
-                      hasToken: !!token,
-                      sessionMatch: receivedSessionId === sessionId,
-                    });
                   }
-                } else {
-                  console.warn(`[OAuth] No query parameters in URL`);
                 }
-              } else {
-                console.log(
-                  `[OAuth] URL does not match myapp://callback pattern`
-                );
               }
             }
           } catch (e) {
@@ -218,11 +199,66 @@ function waitForAuthCallback(sessionId: string): Promise<string> {
         }
       );
 
-      console.log(`[OAuth] ✓ Deep link listener registered successfully`);
+      console.log(`[OAuth] ✓ Deep link listener registered`);
     } catch (e) {
       console.error("[OAuth] Failed to set up deep link listener:", e);
-      reject(new Error("Failed to set up authentication listener"));
     }
+
+    // Strategy 2: Poll the proxy server (fallback for when deep links don't work)
+    console.log(`[OAuth] Starting polling fallback...`);
+    let pollAttempts = 0;
+    const maxPollAttempts = 60; // 60 attempts * 5 seconds = 5 minutes
+
+    pollingInterval = setInterval(async () => {
+      if (resolved) {
+        cleanup();
+        return;
+      }
+
+      pollAttempts++;
+
+      if (pollAttempts > maxPollAttempts) {
+        console.error(`[OAuth] Max polling attempts reached`);
+        cleanup();
+        if (!resolved) {
+          reject(new Error("Authentication timeout - please try again"));
+        }
+        return;
+      }
+
+      try {
+        console.log(
+          `[OAuth] Polling attempt ${pollAttempts}/${maxPollAttempts}`
+        );
+
+        const response = await fetch(`${PROXY_URL}/auth/status/${sessionId}`, {
+          method: "GET",
+          headers: {
+            "Content-Type": "application/json",
+          },
+        });
+
+        if (response.ok) {
+          const data = await response.json();
+
+          if (data.status === "complete" && data.token) {
+            console.log(`[OAuth] ✓ Token received successfully via polling`);
+            resolveWithToken(data.token);
+          } else {
+            console.log(`[OAuth] Auth still pending...`);
+          }
+        } else if (response.status === 404) {
+          console.log(`[OAuth] Session not found or expired`);
+          cleanup();
+          if (!resolved) {
+            reject(new Error("Session expired - please try again"));
+          }
+        }
+      } catch (e) {
+        console.error(`[OAuth] Polling error:`, e);
+        // Continue polling despite errors
+      }
+    }, 5000); // Poll every 5 seconds
   });
 }
 
@@ -243,8 +279,6 @@ export async function authenticatedFetch(
 
 export async function getUserSession(token: string) {
   try {
-    // The token is actually the NextAuth session token (encrypted JWT)
-    // We need to send it as a cookie, not as Authorization header
     const response = await fetch(`${PROXY_URL}/api/session`, {
       method: "POST",
       headers: {

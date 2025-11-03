@@ -28,6 +28,7 @@ import { GeneralSettings } from "./GeneralSettings";
 import { KeybindsSettings } from "./KeybindsSettings";
 import { useNavigate } from "@tanstack/react-router";
 import { useAuth } from "@/contexts/AuthContext";
+import { useSession } from "next-auth/react";
 const menuItems = [
   { id: "general", title: "General", icon: Settings },
   { id: "calendar", title: "Calendar", icon: Calendar },
@@ -112,6 +113,7 @@ export const SettingsComponent = ({
 }: SettingsComponentProps) => {
   const [activeSection, setActiveSection] = useState("general");
   const { user, isLoading, isAuthenticated, login, logout } = useAuth();
+  const { data: session } = useSession();
 
   const navigate = useNavigate();
   const renderContent = () => {
@@ -209,7 +211,7 @@ export const SettingsComponent = ({
             {/* Bottom Actions */}
             <div className=" p-3 space-y-1">
               <button
-                onClick={() => logout}
+                onClick={() => logout()}
                 className="w-full flex items-center gap-3 px-3 py-2 rounded-lg text-sm text-muted-foreground hover:bg-secondary hover:text-card-foreground transition-colors"
               >
                 <LogOut className="w-4 h-4" />

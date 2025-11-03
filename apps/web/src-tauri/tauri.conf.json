@@ -2,10 +2,11 @@
   "$schema": "../node_modules/@tauri-apps/cli/schema.json",
   "productName": "taur-next-0auth",
   "version": "0.1.0",
-  "identifier": "com.taur-next-0auth.app",
+  "identifier": "com.taur.next0auth",
   "build": {
     "beforeDevCommand": "bun dev",
-    "beforeBuildCommand": "bun build",
+    "beforeBuildCommand": "bun run build",
+
     "frontendDist": "../.next",
     "devUrl": "http://localhost:3001"
   },
@@ -53,7 +54,7 @@
   "bundle": {
     "active": true,
     "targets": "all",
-    "icon": [],
+    "icon": ["icons/icon.ico", "icons/icon.icns", "icons/icon.png"],
     "windows": {
       "certificateThumbprint": null,
       "digestAlgorithm": "sha256",

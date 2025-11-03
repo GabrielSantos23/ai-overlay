@@ -3,10 +3,10 @@ import { open } from "@tauri-apps/plugin-shell";
 import { listen } from "@tauri-apps/api/event";
 import { invoke } from "@tauri-apps/api/core";
 
-// Helper to get proxy URL - use production URL in Tauri, localhost otherwise
-function getProxyUrl(): string {
+// Helper to get base URL
+function getBaseUrl(): string {
   if (typeof window === "undefined") {
-    return process.env.NEXT_PUBLIC_PROXY_URL || "http://localhost:3000";
+    return process.env.NEXTAUTH_URL || "http://localhost:3001";
   }
 
   // Check if we're in Tauri
@@ -16,15 +16,15 @@ function getProxyUrl(): string {
     "__TAURI_INTERNALS__" in window;
 
   if (isTauri) {
-    // In Tauri, use production proxy URL (your Vercel URL)
-    return process.env.NEXT_PUBLIC_PROXY_URL || "http://localhost:3000";
+    // In Tauri, use production URL
+    return process.env.NEXT_PUBLIC_BASE_URL || "https://www.bangg.xyz";
   }
 
   // In browser/Next.js, use localhost or env var
-  return process.env.NEXT_PUBLIC_PROXY_URL || "http://localhost:3000";
+  return process.env.NEXT_PUBLIC_BASE_URL || "http://localhost:3001";
 }
 
-const PROXY_URL = getProxyUrl();
+const BASE_URL = getBaseUrl();
 
 interface AuthResponse {
   authUrl: string;
@@ -34,12 +34,12 @@ interface AuthResponse {
 export async function loginWithOAuth(provider: string): Promise<string> {
   try {
     console.log(`[OAuth] Starting OAuth flow for provider: ${provider}`);
-    console.log(`[OAuth] Using proxy URL: ${PROXY_URL}`);
+    console.log(`[OAuth] Using base URL: ${BASE_URL}`);
 
-    // Step 1: Initialize OAuth flow
+    // Step 1: Initialize OAuth flow using the proxy endpoint
     let response: Response;
     try {
-      response = await fetch(`${PROXY_URL}/auth/init`, {
+      response = await fetch(`${BASE_URL}/proxy/auth/init`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -52,8 +52,8 @@ export async function loginWithOAuth(provider: string): Promise<string> {
     } catch (fetchError) {
       console.error(`[OAuth] Fetch error:`, fetchError);
       throw new Error(
-        `Failed to connect to proxy server at ${PROXY_URL}. ` +
-          `Make sure the proxy is running and accessible. Error: ${
+        `Failed to connect to server at ${BASE_URL}. ` +
+          `Make sure the server is running and accessible. Error: ${
             fetchError instanceof Error
               ? fetchError.message
               : String(fetchError)
@@ -64,7 +64,7 @@ export async function loginWithOAuth(provider: string): Promise<string> {
     if (!response.ok) {
       const errorText = await response.text().catch(() => "Unknown error");
       console.error(
-        `[OAuth] Proxy returned error: ${response.status}`,
+        `[OAuth] Server returned error: ${response.status}`,
         errorText
       );
       throw new Error(
@@ -94,11 +94,11 @@ export async function loginWithOAuth(provider: string): Promise<string> {
       await open(cleanUrl);
     }
 
-    // Step 3: Wait for callback using both deep links and polling
+    // Step 3: Wait for callback
     console.log(`[OAuth] Waiting for callback...`);
     const token = await waitForAuthCallback(sessionId);
 
-    console.log(`[OAuth] Token received`);
+    console.log(`[OAuth] Token received: ${token}`);
 
     try {
       await invoke("show_overlay_window");
@@ -121,7 +121,6 @@ function waitForAuthCallback(sessionId: string): Promise<string> {
     );
 
     let deepLinkUnlisten: (() => void) | null = null;
-    let pollingInterval: NodeJS.Timeout | null = null;
     let resolved = false;
 
     const cleanup = () => {
@@ -130,18 +129,6 @@ function waitForAuthCallback(sessionId: string): Promise<string> {
         deepLinkUnlisten();
         deepLinkUnlisten = null;
       }
-      if (pollingInterval) {
-        clearInterval(pollingInterval);
-        pollingInterval = null;
-      }
-    };
-
-    const resolveWithToken = (token: string) => {
-      if (resolved) return;
-      resolved = true;
-      clearTimeout(timeout);
-      cleanup();
-      resolve(token);
     };
 
     const timeout = setTimeout(() => {
@@ -152,45 +139,73 @@ function waitForAuthCallback(sessionId: string): Promise<string> {
       }
     }, 5 * 60 * 1000);
 
-    // Strategy 1: Listen for deep link events
+    // Listen for deep link events
     try {
       console.log(`[OAuth] Registering deep link listener...`);
       deepLinkUnlisten = await listen<string | string[]>(
         "deep-link-received",
         (event) => {
-          if (resolved) return;
+          if (resolved) {
+            console.log(`[OAuth] Already resolved, ignoring event`);
+            return;
+          }
 
           console.log(`[OAuth] Deep link event received:`, event);
+          console.log(`[OAuth] Event payload type:`, typeof event.payload);
+          console.log(`[OAuth] Event payload:`, event.payload);
 
           try {
             const urls = Array.isArray(event.payload)
               ? event.payload
               : [event.payload];
 
+            console.log(`[OAuth] Processing ${urls.length} URL(s)`);
+
             for (const urlStr of urls) {
               const urlString = String(urlStr);
               console.log(`[OAuth] Processing URL: ${urlString}`);
 
               if (urlString.startsWith("myapp://callback")) {
+                console.log(`[OAuth] Matched myapp://callback URL`);
+
                 const parts = urlString.split("?");
                 if (parts.length > 1) {
                   const params = new URLSearchParams(parts[1]);
                   const token = params.get("token");
                   const receivedSessionId = params.get("sessionId");
+                  const email = params.get("email");
+                  const name = params.get("name");
 
                   console.log(`[OAuth] Extracted parameters:`, {
-                    hasToken: !!token,
-                    sessionMatch: receivedSessionId === sessionId,
+                    token: token ? `${token.substring(0, 10)}...` : null,
+                    receivedSessionId,
+                    expectedSessionId: sessionId,
+                    email,
+                    name,
                   });
 
                   if (token && receivedSessionId === sessionId) {
                     console.log(
                       `[OAuth] ✓ Token received successfully via deep link`
                     );
-                    resolveWithToken(token);
+                    resolved = true;
+                    clearTimeout(timeout);
+                    cleanup();
+                    resolve(token);
                     return;
+                  } else {
+                    console.warn(`[OAuth] Session ID mismatch or no token`, {
+                      hasToken: !!token,
+                      sessionMatch: receivedSessionId === sessionId,
+                    });
                   }
+                } else {
+                  console.warn(`[OAuth] No query parameters in URL`);
                 }
+              } else {
+                console.log(
+                  `[OAuth] URL does not match myapp://callback pattern`
+                );
               }
             }
           } catch (e) {
@@ -199,66 +214,11 @@ function waitForAuthCallback(sessionId: string): Promise<string> {
         }
       );
 
-      console.log(`[OAuth] ✓ Deep link listener registered`);
+      console.log(`[OAuth] ✓ Deep link listener registered successfully`);
     } catch (e) {
       console.error("[OAuth] Failed to set up deep link listener:", e);
+      reject(new Error("Failed to set up authentication listener"));
     }
-
-    // Strategy 2: Poll the proxy server (fallback for when deep links don't work)
-    console.log(`[OAuth] Starting polling fallback...`);
-    let pollAttempts = 0;
-    const maxPollAttempts = 60; // 60 attempts * 5 seconds = 5 minutes
-
-    pollingInterval = setInterval(async () => {
-      if (resolved) {
-        cleanup();
-        return;
-      }
-
-      pollAttempts++;
-
-      if (pollAttempts > maxPollAttempts) {
-        console.error(`[OAuth] Max polling attempts reached`);
-        cleanup();
-        if (!resolved) {
-          reject(new Error("Authentication timeout - please try again"));
-        }
-        return;
-      }
-
-      try {
-        console.log(
-          `[OAuth] Polling attempt ${pollAttempts}/${maxPollAttempts}`
-        );
-
-        const response = await fetch(`${PROXY_URL}/auth/status/${sessionId}`, {
-          method: "GET",
-          headers: {
-            "Content-Type": "application/json",
-          },
-        });
-
-        if (response.ok) {
-          const data = await response.json();
-
-          if (data.status === "complete" && data.token) {
-            console.log(`[OAuth] ✓ Token received successfully via polling`);
-            resolveWithToken(data.token);
-          } else {
-            console.log(`[OAuth] Auth still pending...`);
-          }
-        } else if (response.status === 404) {
-          console.log(`[OAuth] Session not found or expired`);
-          cleanup();
-          if (!resolved) {
-            reject(new Error("Session expired - please try again"));
-          }
-        }
-      } catch (e) {
-        console.error(`[OAuth] Polling error:`, e);
-        // Continue polling despite errors
-      }
-    }, 5000); // Poll every 5 seconds
   });
 }
 
@@ -267,7 +227,9 @@ export async function authenticatedFetch(
   token: string,
   options: RequestInit = {}
 ): Promise<Response> {
-  return fetch(`${PROXY_URL}/api${endpoint}`, {
+  // Note: In this setup, you'd typically use NextAuth's session
+  // directly in your API routes instead of proxying
+  return fetch(`${BASE_URL}/api${endpoint}`, {
     ...options,
     headers: {
       ...options.headers,
@@ -279,7 +241,7 @@ export async function authenticatedFetch(
 
 export async function getUserSession(token: string) {
   try {
-    const response = await fetch(`${PROXY_URL}/api/session`, {
+    const response = await fetch(`${BASE_URL}/proxy/api/session`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",

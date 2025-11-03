@@ -1,5 +1,5 @@
 // OAuth Proxy Server for Tauri and Preview Environments
-import express, { type Request, type Response } from "express";
+import express from "express";
 import cors from "cors";
 import dotenv from "dotenv";
 
@@ -8,7 +8,7 @@ dotenv.config();
 const app = express();
 const PORT = process.env.PORT || 3001;
 
-// Configure CORS
+// Configure CORS properly
 const allowedOrigins = process.env.ALLOWED_ORIGINS?.split(",") || [
   "tauri://localhost",
   "http://localhost:1420",
@@ -22,11 +22,19 @@ app.use(
       origin: string | undefined,
       callback: (err: Error | null, allow?: boolean) => void
     ) => {
+      // Allow requests with no origin (mobile apps, Postman, etc.)
       if (!origin) return callback(null, true);
-      if (allowedOrigins.includes(origin)) {
-        callback(null, true);
+
+      // In production, strictly check origins
+      if (process.env.NODE_ENV === "production") {
+        if (allowedOrigins.includes(origin)) {
+          callback(null, true);
+        } else {
+          callback(new Error("Not allowed by CORS"));
+        }
       } else {
-        callback(null, true); // Allow all for development
+        // Development: allow all
+        callback(null, true);
       }
     },
     credentials: true,
@@ -35,26 +43,20 @@ app.use(
 
 app.use(express.json());
 
-// Store active sessions
-interface SessionData {
-  provider: string;
-  callbackUrl: string;
-  createdAt: number;
-  callbackReceived?: boolean;
-  callbackReceivedAt?: number;
-  sessionToken?: string;
-  allCookies?: string;
-}
-
-const sessions = new Map<string, SessionData>();
+// Store active sessions (Note: In production, use Redis or similar)
+const sessions = new Map<string, any>();
 
 // Health check endpoint
-app.get("/health", (req: Request, res: Response) => {
-  res.json({ status: "ok", timestamp: new Date().toISOString() });
+app.get("/health", (req: express.Request, res: express.Response) => {
+  res.json({
+    status: "ok",
+    timestamp: new Date().toISOString(),
+    env: process.env.NODE_ENV,
+  });
 });
 
 // Initiate OAuth flow
-app.post("/auth/init", async (req: Request, res: Response) => {
+app.post("/auth/init", async (req: express.Request, res: express.Response) => {
   try {
     console.log("Received OAuth init request:", req.body);
     const { provider, callbackUrl } = req.body;
@@ -67,31 +69,21 @@ app.post("/auth/init", async (req: Request, res: Response) => {
 
     sessions.set(sessionId, {
       provider,
-      callbackUrl,
+      callbackUrl: callbackUrl || "myapp://callback",
       createdAt: Date.now(),
     });
 
     const nextAuthUrl = process.env.NEXTAUTH_URL;
-    // Use Vercel URL if available, otherwise fall back to PROXY_URL or localhost
-    const vercelUrl = process.env.VERCEL_URL
-      ? `https://${process.env.VERCEL_URL}`
-      : null;
-    const proxyUrl =
-      process.env.PROXY_URL || vercelUrl || `http://localhost:${PORT}`;
+    const proxyUrl = process.env.PROXY_URL || `http://localhost:${PORT}`;
 
-    console.log("Proxy configuration:", {
-      nextAuthUrl,
-      proxyUrl,
-      vercelUrl,
-      envProxyUrl: process.env.PROXY_URL,
-      port: PORT,
-    });
-
+    // Important: Use the proxy's /auth/callback endpoint
     const authUrl = `${nextAuthUrl}/api/auth/signin/${provider}?callbackUrl=${encodeURIComponent(
       `${proxyUrl}/auth/callback?session=${sessionId}`
     )}`;
 
     console.log("Generated auth URL:", authUrl);
+    console.log("Proxy URL:", proxyUrl);
+    console.log("NextAuth URL:", nextAuthUrl);
 
     res.json({
       authUrl,
@@ -104,424 +96,275 @@ app.post("/auth/init", async (req: Request, res: Response) => {
 });
 
 // Handle OAuth callback from NextAuth
-app.get("/auth/callback", async (req: Request, res: Response) => {
-  try {
-    const { session: sessionId } = req.query;
+app.get(
+  "/auth/callback",
+  async (req: express.Request, res: express.Response) => {
+    try {
+      const { session: sessionId } = req.query;
 
-    console.log("OAuth callback received, session ID:", sessionId);
+      console.log("OAuth callback received, session ID:", sessionId);
 
-    const cookies = req.headers.cookie || "";
-    console.log("Cookies received:", cookies.substring(0, 100) + "...");
+      const cookies = req.headers.cookie || "";
+      console.log("Cookies received:", cookies ? "yes" : "no");
 
-    let sessionToken = null;
-    // Try multiple cookie name patterns
-    const sessionTokenMatch =
-      cookies.match(/next-auth\.session-token=([^;]+)/) ||
-      cookies.match(/__Secure-next-auth\.session-token=([^;]+)/) ||
-      cookies.match(/__Host-next-auth\.session-token=([^;]+)/);
-
-    if (sessionTokenMatch) {
-      sessionToken = sessionTokenMatch[1];
-      console.log(
-        "Extracted NextAuth session token (length:",
-        sessionToken && sessionToken.length,
-        ")"
+      let sessionToken = null;
+      // Support both cookie names: non-secure and secure
+      const nonSecureMatch = cookies.match(/next-auth\.session-token=([^;]+)/);
+      const secureMatch = cookies.match(
+        /__Secure-next-auth\.session-token=([^;]+)/
       );
-    } else {
-      console.warn("No NextAuth session token found in cookies");
-    }
+      if (secureMatch) {
+        sessionToken = secureMatch[1];
+        console.log("Extracted __Secure-next-auth.session-token");
+      } else if (nonSecureMatch) {
+        sessionToken = nonSecureMatch[1];
+        console.log("Extracted next-auth.session-token");
+      } else {
+        console.warn("No NextAuth session token found in cookies");
+      }
 
-    if (!sessionId) {
-      console.error("No session ID provided");
-      return res.status(400).send("No session ID provided");
-    }
+      if (!sessionId || typeof sessionId !== "string") {
+        console.error("No session ID provided");
+        return res.status(400).send("No session ID provided");
+      }
 
-    const session = sessions.get(sessionId as string);
+      const session = sessions.get(sessionId);
 
-    if (session) {
+      if (!session) {
+        console.error("Session not found:", sessionId);
+        return res.status(404).send("Session not found or expired");
+      }
+
+      // Mark session as callback received
       session.callbackReceived = true;
       session.callbackReceivedAt = Date.now();
-      // Store cookies and session token for later validation
-      if (cookies) {
-        session.allCookies = cookies;
-      }
-      if (sessionToken) {
-        session.sessionToken = sessionToken;
-      }
-    }
+      session.sessionToken = sessionToken;
 
-    const nextAuthUrl = process.env.NEXTAUTH_URL;
-    const callbackUrl = session?.callbackUrl || "myapp://callback";
+      const nextAuthUrl = process.env.NEXTAUTH_URL;
+      const callbackUrl = session.callbackUrl || "myapp://callback";
 
-    console.log("Callback handler config:", {
-      nextAuthUrl,
-      callbackUrl,
-      hasCookies: !!cookies,
-      cookieCount: cookies ? cookies.split(";").length : 0,
-    });
-
-    if (!nextAuthUrl) {
-      console.error("NEXTAUTH_URL environment variable is not set!");
-      return res.status(500).send(`
-        <!DOCTYPE html>
-        <html>
-          <head><title>Configuration Error</title></head>
-          <body>
-            <h2>Configuration Error</h2>
-            <p>NEXTAUTH_URL environment variable is not set in the proxy server.</p>
-            <p>Please configure it in your Vercel environment variables.</p>
-          </body>
-        </html>
-      `);
-    }
-
-    // Fetch session server-side to avoid CORS issues
-    let sessionData: { user?: { email?: string; name?: string } } | null = null;
-    let fetchError: string | null = null;
-
-    if (cookies) {
-      try {
-        const sessionUrl = `${nextAuthUrl}/api/auth/session`;
-        console.log("Fetching session from NextAuth server-side...", {
-          url: sessionUrl,
-          cookieLength: cookies.length,
-          cookiePreview: cookies.substring(0, 200),
-        });
-
-        const sessionResponse = await fetch(sessionUrl, {
-          method: "GET",
-          headers: {
-            Cookie: cookies, // Forward all cookies to NextAuth
-            "Content-Type": "application/json",
-            "User-Agent": "oauth-proxy/1.0",
-          },
-        });
-
-        console.log("Session fetch response:", {
-          status: sessionResponse.status,
-          statusText: sessionResponse.statusText,
-          headers: Object.fromEntries(sessionResponse.headers.entries()),
-        });
-
-        if (sessionResponse.ok) {
-          sessionData = (await sessionResponse.json()) as {
-            user?: { email?: string; name?: string };
-          };
-          console.log("Session retrieved server-side:", {
-            hasUser: !!sessionData?.user,
-            userEmail: sessionData?.user?.email,
-          });
-        } else {
-          const errorText = await sessionResponse
-            .text()
-            .catch(() => "Unknown error");
-          console.warn("Failed to fetch session:", {
-            status: sessionResponse.status,
-            statusText: sessionResponse.statusText,
-            errorText: errorText.substring(0, 500),
-          });
-          fetchError = `Failed to fetch session: ${sessionResponse.status} ${
-            sessionResponse.statusText
-          }. ${errorText.substring(0, 200)}`;
-        }
-      } catch (err) {
-        console.error("Error fetching session server-side:", {
-          error: err,
-          message: err instanceof Error ? err.message : String(err),
-          stack: err instanceof Error ? err.stack : undefined,
-          nextAuthUrl,
-        });
-        fetchError = `Fetch error: ${
-          err instanceof Error ? err.message : String(err)
-        }. Make sure NEXTAUTH_URL is set correctly and the NextAuth server is accessible.`;
-      }
-    } else {
-      fetchError =
-        "No cookies received in callback. This might indicate the OAuth flow didn't complete properly.";
-      console.warn("No cookies in callback request");
-    }
-
-    // If we have session data, extract the token from cookies for the deep link
-    if (!sessionToken && sessionData?.user) {
-      // Try to get token from cookie header again
-      const allCookies = cookies.split(";");
-      for (const cookie of allCookies) {
-        const trimmed = cookie.trim();
-        if (
-          trimmed.startsWith("next-auth.session-token=") ||
-          trimmed.startsWith("__Secure-next-auth.session-token=") ||
-          trimmed.startsWith("__Host-next-auth.session-token=")
-        ) {
-          sessionToken = trimmed.split("=").slice(1).join("=");
-          break;
-        }
-      }
-    }
-
-    // Build the deep link URL
-    // Only use sessionToken if we have it; otherwise, we need to fetch it from NextAuth
-    // If we have session data, we successfully authenticated, so use sessionId as reference
-    // The client will use sessionId to retrieve the actual cookies/token from the session map
-    const token =
-      sessionToken || (sessionData?.user ? (sessionId as string) : null);
-    const email = sessionData?.user?.email || "";
-    const name = sessionData?.user?.name || "";
-
-    if (!token) {
-      return res.status(500).send(`
-        <!DOCTYPE html>
-        <html>
-          <head><title>Authentication Error</title></head>
-          <body>
-            <h2>Authentication Error</h2>
-            <p>Failed to retrieve authentication token. Please try logging in again.</p>
-            <p><small>Session ID: ${sessionId || "None"}</small></p>
-          </body>
-        </html>
-      `);
-    }
-
-    const deepLinkUrl = `${callbackUrl}?token=${encodeURIComponent(
-      token
-    )}&sessionId=${encodeURIComponent(
-      sessionId as string
-    )}&email=${encodeURIComponent(email)}&name=${encodeURIComponent(name)}`;
-
-    // Send HTML page that redirects immediately or shows error
-    if (sessionData?.user) {
+      // Return HTML that handles both web and Tauri cases
       res.send(`
-        <!DOCTYPE html>
-        <html>
-          <head>
-            <title>Authentication Complete</title>
-            <meta charset="UTF-8">
-            <meta http-equiv="refresh" content="1;url=${deepLinkUrl}">
-          </head>
-          <body>
-            <h2>Authentication Successful!</h2>
-            <p>Redirecting to app...</p>
-            <script>
-              const redirectKey = 'oauth_redirected_${sessionId}';
-              if (sessionStorage.getItem(redirectKey)) {
-                console.log('Already redirected');
-              } else {
-                sessionStorage.setItem(redirectKey, 'true');
-                console.log('Redirecting to:', ${JSON.stringify(callbackUrl)});
-                window.location.href = ${JSON.stringify(deepLinkUrl)};
-              }
-              
-              setTimeout(() => {
-                document.body.innerHTML = '<h2>Please return to the app</h2>';
-              }, 2000);
-            </script>
-          </body>
-        </html>
-      `);
-    } else {
-      // Even if we can't get session, we can still try to redirect with the session token
-      // This allows the Tauri app to validate the token later
-      if (sessionToken || sessionId) {
-        console.log(
-          "No session data, but have token/sessionId. Redirecting with available data..."
-        );
-        const fallbackDeepLinkUrl = `${callbackUrl}?token=${encodeURIComponent(
-          sessionToken || (sessionId as string)
-        )}&sessionId=${encodeURIComponent(sessionId as string)}`;
-
-        res.send(`
-          <!DOCTYPE html>
-          <html>
-            <head>
-              <title>Authentication Processing</title>
-              <meta charset="UTF-8">
-              <meta http-equiv="refresh" content="2;url=${fallbackDeepLinkUrl}">
-            </head>
-            <body>
-              <h2>Processing Authentication...</h2>
-              <p>Redirecting to app. If you see an error, please try logging in again.</p>
-              ${
-                fetchError
-                  ? `<p style="color: red; font-size: 12px;">Error: ${fetchError}</p>`
-                  : ""
-              }
-              <script>
-                setTimeout(() => {
-                  window.location.href = ${JSON.stringify(fallbackDeepLinkUrl)};
-                }, 1000);
-              </script>
-            </body>
-          </html>
-        `);
-      } else {
-        res.send(`
-          <!DOCTYPE html>
-          <html>
-            <head>
-              <title>Authentication Error</title>
-              <meta charset="UTF-8">
-            </head>
-            <body>
-              <h2>Authentication Error</h2>
-              <p>${
-                fetchError ||
-                "Failed to retrieve session. Please try logging in again."
-              }</p>
-              <p><strong>Debug info:</strong></p>
-              <ul>
-                <li>Session ID: ${sessionId || "None"}</li>
-                <li>Has cookies: ${cookies ? "Yes" : "No"}</li>
-                <li>NextAuth URL: ${nextAuthUrl || "Not set"}</li>
-              </ul>
-              <p>If this persists, please close this window and try again.</p>
-              <p><small>Check the Vercel logs for more details.</small></p>
-            </body>
-          </html>
-        `);
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>Authentication Complete</title>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <style>
+      body {
+        font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        min-height: 100vh;
+        margin: 0;
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
       }
+      .container {
+        background: white;
+        padding: 2rem;
+        border-radius: 8px;
+        box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        text-align: center;
+        max-width: 400px;
+      }
+      .spinner {
+        border: 3px solid #f3f3f3;
+        border-top: 3px solid #667eea;
+        border-radius: 50%;
+        width: 40px;
+        height: 40px;
+        animation: spin 1s linear infinite;
+        margin: 20px auto;
+      }
+      @keyframes spin {
+        0% { transform: rotate(0deg); }
+        100% { transform: rotate(360deg); }
+      }
+      .success { color: #10b981; }
+      .error { color: #ef4444; }
+    </style>
+  </head>
+  <body>
+    <div class="container">
+      <h2>Authentication Successful!</h2>
+      <div class="spinner"></div>
+      <p id="status">Retrieving session...</p>
+    </div>
+    <script>
+      const sessionId = ${JSON.stringify(sessionId)};
+      const nextAuthUrl = ${JSON.stringify(nextAuthUrl)};
+      const callbackUrl = ${JSON.stringify(callbackUrl)};
+      const sessionToken = ${JSON.stringify(sessionToken)};
+      const statusEl = document.getElementById('status');
+      
+      async function completeAuth() {
+        try {
+          console.log('Fetching session from NextAuth...');
+          
+          const response = await fetch(nextAuthUrl + '/api/auth/session', {
+            method: 'GET',
+            credentials: 'include',
+            mode: 'cors',
+            headers: {
+              // Send both cookie names to maximize compatibility
+              'Cookie': sessionToken 
+                ? '__Secure-next-auth.session-token=' + sessionToken + '; next-auth.session-token=' + sessionToken 
+                : ''
+            }
+          });
+          
+          if (!response.ok) {
+            throw new Error('Failed to fetch session: ' + response.status);
+          }
+          
+          const session = await response.json();
+          console.log('Session retrieved:', session);
+          
+          if (!session || !session.user) {
+            throw new Error('Invalid session data');
+          }
+          
+          statusEl.textContent = 'Redirecting to app...';
+          
+          // Store token for polling endpoint
+          const token = sessionToken || sessionId;
+          
+          // Try deep link first (for Tauri app)
+          const deepLinkUrl = callbackUrl + 
+            '?token=' + encodeURIComponent(token) + 
+            '&sessionId=' + encodeURIComponent(sessionId) +
+            '&email=' + encodeURIComponent(session.user.email || '') +
+            '&name=' + encodeURIComponent(session.user.name || '');
+          
+          console.log('Attempting deep link:', deepLinkUrl);
+          window.location.href = deepLinkUrl;
+          
+          // Fallback for web browsers (show instructions)
+          setTimeout(() => {
+            statusEl.innerHTML = 
+              '<div class="success">' +
+              '<h3>✓ Authentication Complete</h3>' +
+              '<p>Please return to the application.</p>' +
+              '<p style="font-size: 0.9em; color: #666;">If the app did not open automatically, please close this window.</p>' +
+              '</div>';
+          }, 2000);
+          
+        } catch (error) {
+          console.error('Error:', error);
+          statusEl.innerHTML = 
+            '<div class="error">' +
+            '<h3>Error</h3>' +
+            '<p>' + error.message + '</p>' +
+            '<p style="font-size: 0.9em;">Please close this window and try again.</p>' +
+            '</div>';
+        }
+      }
+      
+      // Wait a bit for cookies to be set
+      setTimeout(completeAuth, 1000);
+    </script>
+  </body>
+</html>
+    `);
+    } catch (error) {
+      console.error("Error in /auth/callback:", error);
+      res
+        .status(500)
+        .send("Internal server error: " + (error as Error).message);
     }
-  } catch (error) {
-    console.error("Error in /auth/callback:", error);
-    const errorMessage = error instanceof Error ? error.message : String(error);
-    res.status(500).send("Internal server error: " + errorMessage);
   }
-});
+);
+
+// Polling endpoint - allows Tauri app to check if auth is complete
+app.get(
+  "/auth/status/:sessionId",
+  async (req: express.Request, res: express.Response) => {
+    try {
+      const { sessionId } = req.params;
+
+      if (!sessionId) {
+        return res.status(400).json({ error: "Session ID required" });
+      }
+
+      const session = sessions.get(sessionId);
+
+      if (!session) {
+        return res.status(404).json({ error: "Session not found or expired" });
+      }
+
+      if (session.callbackReceived && session.sessionToken) {
+        // Auth complete, return token
+        return res.json({
+          status: "complete",
+          token: session.sessionToken,
+          sessionId: sessionId,
+        });
+      }
+
+      // Still waiting
+      res.json({ status: "pending" });
+    } catch (error) {
+      console.error("Error in /auth/status:", error);
+      res.status(500).json({ error: "Failed to check auth status" });
+    }
+  }
+);
 
 // Session validation endpoint (MUST BE BEFORE THE CATCH-ALL /api MIDDLEWARE)
-app.post("/api/session", async (req: Request, res: Response) => {
-  try {
-    const { token } = req.body;
-
-    if (!token) {
-      return res.status(401).json({ error: "No token provided" });
-    }
-
-    console.log("Validating session, token length:", token.length);
-
-    const nextAuthUrl = process.env.NEXTAUTH_URL;
-
-    if (!nextAuthUrl) {
-      console.error("NEXTAUTH_URL environment variable is not set!");
-      return res.status(500).json({
-        error:
-          "Server configuration error: NEXTAUTH_URL is not set. Please set it in Vercel environment variables to your NextAuth app URL (e.g., https://your-app.vercel.app)",
-      });
-    }
-
-    // Check if NEXTAUTH_URL is localhost (won't work on Vercel)
-    if (
-      nextAuthUrl.includes("localhost") ||
-      nextAuthUrl.includes("127.0.0.1")
-    ) {
-      console.error(
-        "NEXTAUTH_URL is set to localhost, which won't work on Vercel:",
-        nextAuthUrl
-      );
-      return res.status(500).json({
-        error: `Server configuration error: NEXTAUTH_URL is set to "${nextAuthUrl}" which is a localhost URL. On Vercel, this must be set to your production NextAuth app URL (e.g., https://your-app.vercel.app). Please update the NEXTAUTH_URL environment variable in Vercel.`,
-      });
-    }
-
-    // If token looks like a sessionId (short, alphanumeric), try to get stored cookies
-    let cookiesToUse = `next-auth.session-token=${token}`;
-
-    // Check if token is actually a sessionId (stored in our sessions map)
-    // SessionIds are typically 11-13 characters, while NextAuth tokens are much longer
-    if (token.length < 20 && sessions.has(token)) {
-      const session = sessions.get(token);
-      if (session?.allCookies) {
-        console.log("Using stored cookies from session map");
-        cookiesToUse = session.allCookies;
-      } else if (session?.sessionToken) {
-        console.log("Using stored session token from session map");
-        cookiesToUse = `next-auth.session-token=${session.sessionToken}`;
-      }
-    }
-
-    const targetUrl = `${nextAuthUrl}/api/auth/session`;
-    console.log("Fetching session from:", targetUrl);
-
+app.post(
+  "/api/session",
+  async (req: express.Request, res: express.Response) => {
     try {
+      const { token } = req.body;
+
+      if (!token) {
+        return res.status(401).json({ error: "No token provided" });
+      }
+
+      console.log("Validating session...");
+
+      const nextAuthUrl = process.env.NEXTAUTH_URL;
+      const targetUrl = `${nextAuthUrl}/api/auth/session`;
+
       const response = await fetch(targetUrl, {
         method: "GET",
         headers: {
           "Content-Type": "application/json",
-          Cookie: cookiesToUse,
-          "User-Agent": "oauth-proxy/1.0",
+          // Send both cookie names to cover prod (secure) and dev
+          Cookie: `__Secure-next-auth.session-token=${token}; next-auth.session-token=${token}`,
         },
       });
 
-      console.log("Session validation response:", {
-        status: response.status,
-        statusText: response.statusText,
-        ok: response.ok,
-      });
-
       if (!response.ok) {
-        const errorText = await response.text().catch(() => "Unknown error");
-        console.error("Session validation failed:", {
-          status: response.status,
-          statusText: response.statusText,
-          errorText: errorText.substring(0, 500),
-        });
-        return res.status(response.status).json({
-          error: `Session validation failed: ${response.status} ${response.statusText}`,
-          details: errorText.substring(0, 200),
-        });
-      }
-
-      const sessionData = (await response.json()) as {
-        user?: { email?: string; name?: string };
-      };
-
-      if (!sessionData || !sessionData.user) {
-        console.error("Invalid session data:", sessionData);
+        console.error("Session validation failed:", response.status);
         return res
-          .status(401)
-          .json({ error: "Invalid session: no user data found" });
+          .status(response.status)
+          .json({ error: "Session validation failed" });
       }
 
-      console.log("Session validated for user:", sessionData.user.email);
+      const sessionData = await response.json();
+
+      if (!sessionData || !(sessionData as any).user) {
+        console.error("Invalid session data");
+        return res.status(401).json({ error: "Invalid session" });
+      }
+
+      console.log(
+        "Session validated for user:",
+        (sessionData as any).user.email
+      );
       res.json(sessionData);
-    } catch (fetchError) {
-      console.error("Session validation fetch error:", {
-        error: fetchError,
-        message:
-          fetchError instanceof Error ? fetchError.message : String(fetchError),
-        nextAuthUrl,
-        targetUrl,
-      });
-
-      const errorMessage =
-        fetchError instanceof Error ? fetchError.message : String(fetchError);
-
-      // Provide helpful error message for connection errors
-      if (
-        errorMessage.includes("ECONNREFUSED") ||
-        errorMessage.includes("ENOTFOUND")
-      ) {
-        return res.status(500).json({
-          error: `Cannot connect to NextAuth server at ${nextAuthUrl}. Please verify that NEXTAUTH_URL is set to the correct production URL of your NextAuth application.`,
-          details: errorMessage,
-        });
-      }
-
-      return res.status(500).json({
-        error: "Session validation failed",
-        details: errorMessage,
-      });
+    } catch (error) {
+      console.error("Session validation error:", error);
+      res.status(500).json({ error: "Session validation failed" });
     }
-  } catch (error) {
-    console.error("Session validation error:", error);
-    const errorMessage = error instanceof Error ? error.message : String(error);
-    res.status(500).json({
-      error: "Session validation failed",
-      details: errorMessage,
-    });
   }
-});
+);
 
 // Proxy authenticated requests (THIS MUST BE LAST)
-app.use("/api", async (req: Request, res: Response) => {
+app.use("/api", async (req: express.Request, res: express.Response) => {
   const token = req.headers.authorization?.replace("Bearer ", "");
 
   if (!token) {
@@ -537,7 +380,7 @@ app.use("/api", async (req: Request, res: Response) => {
       method: req.method,
       headers: {
         "Content-Type": "application/json",
-        Cookie: `next-auth.session-token=${token}`,
+        Cookie: `__Secure-next-auth.session-token=${token}; next-auth.session-token=${token}`,
       },
       body:
         req.method !== "GET" && req.method !== "HEAD"
@@ -556,16 +399,20 @@ app.use("/api", async (req: Request, res: Response) => {
 // Clean up expired sessions
 setInterval(() => {
   const now = Date.now();
-  const maxAge = 10 * 60 * 1000;
+  const maxAge = 10 * 60 * 1000; // 10 minutes
 
   for (const [id, session] of sessions.entries()) {
     if (now - session.createdAt > maxAge) {
+      console.log("Cleaning up expired session:", id);
       sessions.delete(id);
     }
   }
-}, 5 * 60 * 1000);
+}, 5 * 60 * 1000); // Run every 5 minutes
 
 app.listen(PORT, () => {
   console.log(`OAuth proxy server running on port ${PORT}`);
+  console.log(`Environment: ${process.env.NODE_ENV}`);
   console.log(`NextAuth URL: ${process.env.NEXTAUTH_URL}`);
+  console.log(`Proxy URL: ${process.env.PROXY_URL}`);
+  console.log(`Allowed origins: ${allowedOrigins.join(", ")}`);
 });
